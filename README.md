@@ -1,98 +1,505 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# NestJS Clean Architecture Todo Demo
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A comprehensive Todo application demonstrating **Clean Architecture** principles with **NestJS**, featuring multiple presentation layers (REST, GraphQL, Kafka) and strict separation of concerns.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Table of Contents
 
-## Description
+- [Architecture Overview](#architecture-overview)
+- [Principles](#principles)
+- [Design Patterns](#design-patterns)
+- [Project Structure](#project-structure)
+- [Layer Descriptions](#layer-descriptions)
+- [Mapper Pattern](#mapper-pattern)
+- [Error Handling](#error-handling)
+- [Getting Started](#getting-started)
+- [API Examples](#api-examples)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Architecture Overview
 
-## Project setup
+This project implements **Clean Architecture** (also known as Onion Architecture or Hexagonal Architecture), where dependencies flow inward toward the domain layer. The architecture ensures that business logic remains independent of frameworks, databases, and external services.
 
-```bash
-$ npm install
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     PRESENTATION LAYER                          │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
+│  │    REST     │  │   GraphQL   │  │    Kafka    │             │
+│  │ Controllers │  │  Resolvers  │  │  Handlers   │             │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘             │
+│         │                │                │                     │
+│         └────────────────┼────────────────┘                     │
+│                          │ Mappers                              │
+└──────────────────────────┼──────────────────────────────────────┘
+                           │
+┌──────────────────────────┼──────────────────────────────────────┐
+│                APPLICATION LAYER                                │
+│                          │                                      │
+│         ┌────────────────┴────────────────┐                     │
+│         │                                 │                     │
+│    ┌────┴────┐                      ┌─────┴─────┐              │
+│    │Commands │                      │  Queries  │              │
+│    │(Create, │                      │(GetById,  │              │
+│    │ Update, │                      │  List)    │              │
+│    │ Delete) │                      │           │              │
+│    └────┬────┘                      └─────┬─────┘              │
+│         │         Use Cases               │                     │
+└─────────┼─────────────────────────────────┼─────────────────────┘
+          │                                 │
+┌─────────┼─────────────────────────────────┼─────────────────────┐
+│         │         DOMAIN LAYER            │                     │
+│         │                                 │                     │
+│    ┌────┴─────────────────────────────────┴────┐               │
+│    │              Entities                     │               │
+│    │         (Todo, Value Objects)             │               │
+│    └───────────────────┬───────────────────────┘               │
+│                        │                                        │
+│    ┌───────────────────┴───────────────────┐                   │
+│    │     Repository Interfaces             │                   │
+│    │        Domain Events                  │                   │
+│    └───────────────────────────────────────┘                   │
+└─────────────────────────────────────────────────────────────────┘
+                           │
+┌──────────────────────────┼──────────────────────────────────────┐
+│              INFRASTRUCTURE LAYER                               │
+│                          │                                      │
+│    ┌─────────────────────┴─────────────────────┐               │
+│    │        Repository Implementations         │               │
+│    │     (InMemory, Database, External APIs)   │               │
+│    └───────────────────────────────────────────┘               │
+│                                                                 │
+│    ┌───────────────────────────────────────────┐               │
+│    │          Exception Handling               │               │
+│    │      (Filters, Strategies)                │               │
+│    └───────────────────────────────────────────┘               │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-## Compile and run the project
+## Principles
 
-```bash
-# development
-$ npm run start
+### Clean Architecture Principles
 
-# watch mode
-$ npm run start:dev
+| Principle | Description |
+|-----------|-------------|
+| **Dependency Rule** | Dependencies point inward. Outer layers depend on inner layers, never the reverse. |
+| **Independence** | Business logic is independent of UI, database, frameworks, and external agencies. |
+| **Testability** | Business rules can be tested without UI, database, web server, or any external element. |
+| **Flexibility** | External components (database, UI) can be swapped without changing business logic. |
 
-# production mode
-$ npm run start:prod
+### SOLID Principles
+
+| Principle | Implementation |
+|-----------|----------------|
+| **S** - Single Responsibility | Each class has one reason to change (e.g., `CreateTodoUseCase` only handles creation) |
+| **O** - Open/Closed | New features added via new classes (e.g., new mappers) without modifying existing code |
+| **L** - Liskov Substitution | Repository implementations are interchangeable (`InMemoryTodoRepository` ↔ `PostgresTodoRepository`) |
+| **I** - Interface Segregation | Granular mapper interfaces (`IRestCommandMapper`, `IRestQueryMapper`) instead of one large interface |
+| **D** - Dependency Inversion | High-level modules depend on abstractions (e.g., use cases depend on `TodoRepository` interface) |
+
+### Domain-Driven Design (DDD) Concepts
+
+- **Entities**: Objects with identity (`Todo`)
+- **Value Objects**: Immutable objects without identity (`TodoId`, `TodoTitle`, `TodoDescription`)
+- **Aggregates**: Cluster of entities treated as a unit (`Todo` is an aggregate root)
+- **Repository Pattern**: Abstraction over data persistence
+- **Domain Events**: Events that domain experts care about (`TodoCreatedEvent`, `TodoCompletedEvent`)
+
+## Design Patterns
+
+### CQRS (Command Query Responsibility Segregation)
+
+Commands and queries are separated into distinct models:
+
+```
+Commands (Write)              Queries (Read)
+├── CreateTodoCommand         ├── GetTodoByIdQuery
+├── UpdateTodoCommand         └── ListTodosQuery
+├── DeleteTodoCommand
+└── CompleteTodoCommand
 ```
 
-## Run tests
+### Repository Pattern
 
-```bash
-# unit tests
-$ npm run test
+Abstract data access behind interfaces:
 
-# e2e tests
-$ npm run test:e2e
+```typescript
+// Domain layer defines the contract
+interface TodoRepository {
+  save(todo: Todo): Promise<Todo>;
+  findById(id: TodoId): Promise<Todo | null>;
+  findAll(): Promise<Todo[]>;
+  delete(id: TodoId): Promise<void>;
+}
 
-# test coverage
-$ npm run test:cov
+// Infrastructure layer provides implementation
+class InMemoryTodoRepository implements TodoRepository { ... }
 ```
 
-## Deployment
+### Mapper Pattern (Granular Interface-Based)
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+Type-safe, single-responsibility mappers for each operation:
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+```typescript
+// Interfaces
+interface IRestCommandMapper<TRequest, TCommand, TResult, TResponse> {
+  toCommand(request: TRequest): TCommand;
+  toResponse(result: TResult): TResponse;
+}
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+interface IRestQueryMapper<TParams, TQuery, TResult, TResponse> {
+  toQuery(params: TParams): TQuery;
+  toResponse(result: TResult): TResponse;
+}
+
+// Implementation
+@Injectable()
+class CreateTodoRestMapper implements IRestCommandMapper<
+  CreateTodoRequest, CreateTodoCommand, CreateTodoResult, CreateTodoResponse
+> { ... }
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### Use Case Pattern
 
-## Resources
+Each use case encapsulates a single business operation:
 
-Check out a few resources that may come in handy when working with NestJS:
+```typescript
+@Injectable()
+class CreateTodoUseCase implements UseCase<CreateTodoCommand, CreateTodoResult> {
+  constructor(private readonly todoRepository: TodoRepository) {}
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+  async execute(command: CreateTodoCommand): Promise<CreateTodoResult> {
+    const todo = Todo.create(command.title, command.description);
+    const saved = await this.todoRepository.save(todo);
+    return CreateTodoResult.fromEntity(saved);
+  }
+}
+```
 
-## Support
+### Strategy Pattern
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+Error response formatting varies by entry point (REST, GraphQL, Kafka):
 
-## Stay in touch
+```typescript
+interface ErrorResponseStrategy<T> {
+  getEntryPoint(): EntryPoint;
+  format(error: Error, context?: ErrorContext): T;
+}
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+class RestErrorResponseStrategy implements ErrorResponseStrategy<RestErrorResponse> { ... }
+class GraphQLErrorResponseStrategy implements ErrorResponseStrategy<GraphQLErrorResponse> { ... }
+```
+
+## Project Structure
+
+```
+src/
+├── app.module.ts                    # Root application module
+├── main.ts                          # Application entry point
+│
+├── core/                            # Shared kernel (cross-cutting concerns)
+│   ├── contracts/                   # Interface definitions
+│   │   ├── mapper.contract.ts       # Generic mapper interfaces
+│   │   ├── presentation-mapper.contract.ts  # REST/GraphQL/Kafka mapper interfaces
+│   │   ├── repository.contract.ts   # Base repository interface
+│   │   └── use-case.contract.ts     # Use case interface
+│   ├── errors/                      # Base error classes
+│   ├── types/                       # Shared types (EntryPoint enum)
+│   └── utilities/                   # Utility functions (Result type)
+│
+├── domain/                          # Enterprise business rules
+│   ├── entities/                    # Domain entities
+│   │   └── todo.entity.ts           # Todo aggregate root
+│   ├── value-objects/               # Value objects
+│   │   ├── todo-id.vo.ts            # Todo identifier
+│   │   ├── todo-title.vo.ts         # Todo title with validation
+│   │   └── todo-description.vo.ts   # Todo description with validation
+│   ├── repositories/                # Repository interfaces (ports)
+│   │   └── todo.repository.ts
+│   ├── events/                      # Domain events
+│   │   ├── todo-created.event.ts
+│   │   ├── todo-completed.event.ts
+│   │   └── todo-deleted.event.ts
+│   └── errors/                      # Domain-specific errors
+│       ├── domain.error.ts
+│       ├── todo-not-found.error.ts
+│       ├── todo-validation.error.ts
+│       └── invalid-todo-status.error.ts
+│
+├── application/                     # Application business rules
+│   ├── application.module.ts        # Application layer module
+│   ├── todo/
+│   │   ├── commands/                # Write operations (CQRS)
+│   │   │   ├── create-todo/
+│   │   │   │   ├── create-todo.command.ts
+│   │   │   │   ├── create-todo.use-case.ts
+│   │   │   │   └── create-todo.result.ts
+│   │   │   ├── update-todo/
+│   │   │   ├── delete-todo/
+│   │   │   └── complete-todo/
+│   │   └── queries/                 # Read operations (CQRS)
+│   │       ├── get-todo-by-id/
+│   │       │   ├── get-todo-by-id.query.ts
+│   │       │   ├── get-todo-by-id.use-case.ts
+│   │       │   └── get-todo-by-id.result.ts
+│   │       └── list-todos/
+│   └── errors/                      # Application-specific errors
+│
+├── infrastructure/                  # Frameworks & drivers
+│   ├── infrastructure.module.ts
+│   ├── persistence/
+│   │   ├── repositories/            # Repository implementations
+│   │   │   └── in-memory-todo.repository.ts
+│   │   └── entities/                # Persistence entities (ORM)
+│   ├── messaging/
+│   │   └── kafka/                   # Kafka service
+│   ├── exception-handling/
+│   │   ├── filters/                 # NestJS exception filters
+│   │   │   ├── global-exception.filter.ts
+│   │   │   ├── domain-exception.filter.ts
+│   │   │   └── application-exception.filter.ts
+│   │   └── strategies/              # Error response strategies
+│   │       ├── rest-error-response.strategy.ts
+│   │       ├── graphql-error-response.strategy.ts
+│   │       └── kafka-error-response.strategy.ts
+│   └── errors/                      # Infrastructure-specific errors
+│
+└── presentation/                    # Interface adapters
+    ├── presentation.module.ts
+    │
+    ├── rest/                        # REST API
+    │   ├── rest.module.ts
+    │   ├── controllers/
+    │   │   └── todo.controller.ts
+    │   ├── dtos/
+    │   │   ├── requests/            # Input DTOs
+    │   │   │   ├── create-todo.request.ts
+    │   │   │   └── update-todo.request.ts
+    │   │   └── responses/           # Output DTOs
+    │   │       └── todo.response.ts
+    │   └── mappers/                 # REST-specific mappers
+    │       ├── mapper.tokens.ts     # DI tokens
+    │       ├── create-todo-rest.mapper.ts
+    │       ├── update-todo-rest.mapper.ts
+    │       ├── delete-todo-rest.mapper.ts
+    │       ├── get-todo-by-id-rest.mapper.ts
+    │       └── list-todos-rest.mapper.ts
+    │
+    ├── graphql/                     # GraphQL API
+    │   ├── graphql.module.ts
+    │   ├── resolvers/
+    │   │   └── todo.resolver.ts
+    │   ├── dtos/
+    │   │   ├── inputs/              # GraphQL input types
+    │   │   │   ├── create-todo.input.ts
+    │   │   │   └── update-todo.input.ts
+    │   │   └── types/               # GraphQL object types
+    │   │       └── todo.type.ts
+    │   ├── args/                    # GraphQL arguments
+    │   │   ├── get-todo.args.ts
+    │   │   └── list-todos.args.ts
+    │   └── mappers/                 # GraphQL-specific mappers
+    │       ├── mapper.tokens.ts
+    │       ├── create-todo-graphql.mapper.ts
+    │       ├── update-todo-graphql.mapper.ts
+    │       ├── delete-todo-graphql.mapper.ts
+    │       ├── get-todo-graphql.mapper.ts
+    │       └── list-todos-graphql.mapper.ts
+    │
+    ├── kafka/                       # Kafka messaging
+    │   ├── kafka.module.ts
+    │   ├── handlers/                # Message handlers
+    │   │   ├── todo-kafka.handler.ts
+    │   │   └── todo-event.handler.ts
+    │   ├── publishers/              # Event publishers
+    │   │   └── todo-event.publisher.ts
+    │   ├── messages/                # Incoming message types
+    │   ├── payloads/                # Outgoing payload types
+    │   ├── dtos/
+    │   └── mappers/
+    │
+    └── errors/                      # Presentation-specific errors
+```
+
+## Layer Descriptions
+
+### Core Layer
+Shared kernel containing cross-cutting concerns: interfaces, base classes, and utilities used across all layers.
+
+### Domain Layer
+The heart of the application containing:
+- **Entities**: Business objects with identity and behavior
+- **Value Objects**: Immutable objects representing concepts
+- **Repository Interfaces**: Abstractions for data access (ports)
+- **Domain Events**: Business-relevant events
+- **Domain Errors**: Business rule violations
+
+### Application Layer
+Orchestrates the flow of data and coordinates domain objects:
+- **Commands**: Represent intent to change state
+- **Queries**: Represent intent to read state
+- **Use Cases**: Execute business operations
+- **Results**: Return data from use cases
+
+### Infrastructure Layer
+Implements interfaces defined in inner layers:
+- **Repository Implementations**: Concrete data access
+- **External Services**: Kafka, HTTP clients, etc.
+- **Exception Handling**: Filters and strategies
+
+### Presentation Layer
+Handles external communication:
+- **REST**: Controllers, DTOs, mappers
+- **GraphQL**: Resolvers, inputs, types, mappers
+- **Kafka**: Handlers, messages, payloads, mappers
+
+## Mapper Pattern
+
+### Why Granular Mappers?
+
+Instead of a single monolithic mapper class, each operation has its own mapper implementing a specific interface:
+
+| Benefit | Description |
+|---------|-------------|
+| **Single Responsibility** | Each mapper handles one transformation |
+| **Type Safety** | Compile-time guarantees with 4-type generics |
+| **Testability** | Easy to unit test in isolation |
+| **Open/Closed** | Add new mappers without modifying existing ones |
+
+### Mapper Interfaces
+
+```typescript
+// REST
+IRestCommandMapper<TRequest, TCommand, TResult, TResponse>
+IRestQueryMapper<TParams, TQuery, TResult, TResponse>
+
+// GraphQL
+IGraphqlMutationMapper<TInput, TCommand, TResult, TType>
+IGraphqlQueryMapper<TArgs, TQuery, TResult, TType>
+
+// Kafka
+IKafkaCommandMapper<TMessage, TCommand, TResult, TPayload>
+IKafkaQueryMapper<TMessage, TQuery, TResult, TPayload>
+```
+
+### Data Flow
+
+```
+REST Request → Mapper.toCommand() → Command → UseCase → Result → Mapper.toResponse() → REST Response
+```
+
+## Error Handling
+
+Layered error handling with RFC 7807 Problem Details for REST:
+
+```
+Domain Errors → Application Errors → Infrastructure Errors → Presentation Errors
+     ↓                  ↓                    ↓                      ↓
+TodoNotFoundError  ValidationError    DatabaseError         BadRequestError
+     ↓                  ↓                    ↓                      ↓
+     └──────────────────┴────────────────────┴──────────────────────┘
+                                    ↓
+                         Exception Filters
+                                    ↓
+                    Error Response Strategy (REST/GraphQL/Kafka)
+```
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- npm or yarn
+
+### Installation
+
+```bash
+npm install
+```
+
+### Running the Application
+
+```bash
+# Development
+npm run start:dev
+
+# Production
+npm run build
+npm run start:prod
+```
+
+### Running Tests
+
+```bash
+# Unit tests
+npm run test
+
+# E2E tests
+npm run test:e2e
+
+# Test coverage
+npm run test:cov
+```
+
+## API Examples
+
+### REST API
+
+```bash
+# Create a todo
+curl -X POST http://localhost:3000/api/todos \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Learn Clean Architecture", "description": "Study the principles"}'
+
+# Get all todos
+curl http://localhost:3000/api/todos
+
+# Get todo by ID
+curl http://localhost:3000/api/todos/{id}
+
+# Update a todo
+curl -X PUT http://localhost:3000/api/todos/{id} \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Updated Title", "status": "COMPLETED"}'
+
+# Delete a todo
+curl -X DELETE http://localhost:3000/api/todos/{id}
+```
+
+### GraphQL API
+
+Access GraphQL Playground at `http://localhost:3000/graphql`
+
+```graphql
+# Create a todo
+mutation {
+  createTodo(input: { title: "Learn GraphQL", description: "Study queries and mutations" }) {
+    id
+    title
+    status
+    createdAt
+  }
+}
+
+# Get all todos
+query {
+  todos {
+    id
+    title
+    status
+  }
+}
+
+# Get todo by ID
+query {
+  todo(id: "uuid-here") {
+    id
+    title
+    description
+    status
+    createdAt
+    updatedAt
+  }
+}
+```
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+MIT
