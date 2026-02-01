@@ -1,17 +1,19 @@
+import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { Module } from '@nestjs/common';
 import { GraphQLModule as NestGraphQLModule } from '@nestjs/graphql';
-import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
+
 import { join } from 'path';
+
 import { ApplicationModule } from '../../application/application.module';
-import { TodoResolver } from './resolvers';
 import {
-  GRAPHQL_MAPPER_TOKENS,
   CreateTodoGraphqlMapper,
-  UpdateTodoGraphqlMapper,
   DeleteTodoGraphqlMapper,
+  GRAPHQL_MAPPER_TOKENS,
   GetTodoGraphqlMapper,
   ListTodosGraphqlMapper,
+  UpdateTodoGraphqlMapper,
 } from './mappers';
+import { TodoResolver } from './resolvers';
 
 @Module({
   imports: [
@@ -22,7 +24,7 @@ import {
       sortSchema: true,
       playground: true,
       introspection: true,
-      formatError: (error) => {
+      formatError: error => {
         // Custom error formatting for GraphQL
         return {
           message: error.message,

@@ -40,11 +40,7 @@ export interface TodoCompletedEvent {
 }
 
 // Union type for all todo events
-export type TodoEvent =
-  | TodoCreatedEvent
-  | TodoUpdatedEvent
-  | TodoDeletedEvent
-  | TodoCompletedEvent;
+export type TodoEvent = TodoCreatedEvent | TodoUpdatedEvent | TodoDeletedEvent | TodoCompletedEvent;
 
 // Event type discriminator
 export enum TodoEventType {

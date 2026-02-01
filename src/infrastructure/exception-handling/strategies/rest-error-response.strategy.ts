@@ -1,23 +1,23 @@
-import { Injectable } from '@nestjs/common';
-import { HttpStatus } from '@nestjs/common';
-import { BaseError } from '../../../core/errors';
-import { EntryPoint } from '../../../core/types';
-import {
-  DomainError,
-  TodoNotFoundError,
-  InvalidTodoStatusError,
-  TodoValidationError,
-} from '../../../domain/errors';
+import { HttpStatus, Injectable } from '@nestjs/common';
+
 import {
   ApplicationError,
   ApplicationValidationError,
 } from '../../../application/errors';
+import { BaseError } from '../../../core/errors';
+import { EntryPoint } from '../../../core/types';
+import {
+  DomainError,
+  InvalidTodoStatusError,
+  TodoNotFoundError,
+  TodoValidationError,
+} from '../../../domain/errors';
+import { BadRequestError, PresentationError } from '../../../presentation/errors';
 import { InfrastructureError } from '../../errors';
-import { PresentationError, BadRequestError } from '../../../presentation/errors';
 import {
   BaseErrorResponseStrategy,
-  RestErrorResponse,
   ErrorContext,
+  RestErrorResponse,
   ValidationErrorDetail,
 } from './error-response.strategy';
 
@@ -168,9 +168,13 @@ export class RestErrorResponseStrategy extends BaseErrorResponseStrategy<RestErr
   private extractValidationErrors(error: BaseError | Error): ValidationErrorDetail[] {
     // Handle ApplicationValidationError with details
     if (error instanceof ApplicationValidationError) {
-      const details = (error as ApplicationValidationError & { details?: Array<{ field: string; message: string }> }).details;
+      const details = (
+        error as ApplicationValidationError & {
+          details?: Array<{ field: string; message: string }>;
+        }
+      ).details;
       if (Array.isArray(details)) {
-        return details.map((detail) => ({
+        return details.map(detail => ({
           field: detail.field,
           message: detail.message,
         }));

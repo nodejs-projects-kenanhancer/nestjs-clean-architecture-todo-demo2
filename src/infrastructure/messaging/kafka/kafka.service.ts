@@ -1,10 +1,7 @@
-import {
-  Injectable,
-  OnModuleInit,
-  OnModuleDestroy,
-  Logger,
-} from '@nestjs/common';
-import { Kafka, Producer, Consumer, Admin } from 'kafkajs';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+
+import { Admin, Consumer, Kafka, Producer } from 'kafkajs';
+
 import { KafkaError } from '../../errors';
 
 export interface KafkaConfig {
@@ -43,9 +40,7 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy {
     try {
       await this.connect();
     } catch {
-      this.logger.warn(
-        'Kafka connection failed, running without Kafka support',
-      );
+      this.logger.warn('Kafka connection failed, running without Kafka support');
     }
   }
 
@@ -87,10 +82,7 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async send(
-    topic: string,
-    messages: { key?: string; value: string }[],
-  ): Promise<void> {
+  async send(topic: string, messages: { key?: string; value: string }[]): Promise<void> {
     if (!this.isConnected) {
       this.logger.warn('Kafka not connected, skipping message send');
       return;

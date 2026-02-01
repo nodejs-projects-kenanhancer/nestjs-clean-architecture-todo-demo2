@@ -1,10 +1,4 @@
-import {
-  IsString,
-  IsOptional,
-  MinLength,
-  MaxLength,
-  IsIn,
-} from 'class-validator';
+import { IsIn, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 export class UpdateTodoRequest {
   @IsOptional()

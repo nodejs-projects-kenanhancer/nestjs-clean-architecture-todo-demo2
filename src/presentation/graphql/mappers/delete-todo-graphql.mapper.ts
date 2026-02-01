@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
-import { IGraphqlMutationMapper } from '../../../core/contracts/index.js';
 import { DeleteTodoCommand, DeleteTodoResult } from '../../../application/todo/index.js';
+import { IGraphqlMutationMapper } from '../../../core/contracts/index.js';
 import { DeleteTodoResultType } from '../dtos/types/index.js';
 
 export interface DeleteTodoInputId {
@@ -9,9 +9,12 @@ export interface DeleteTodoInputId {
 }
 
 @Injectable()
-export class DeleteTodoGraphqlMapper
-  implements IGraphqlMutationMapper<DeleteTodoInputId, DeleteTodoCommand, DeleteTodoResult, DeleteTodoResultType>
-{
+export class DeleteTodoGraphqlMapper implements IGraphqlMutationMapper<
+  DeleteTodoInputId,
+  DeleteTodoCommand,
+  DeleteTodoResult,
+  DeleteTodoResultType
+> {
   toCommand(input: DeleteTodoInputId): DeleteTodoCommand {
     return new DeleteTodoCommand(input.id);
   }

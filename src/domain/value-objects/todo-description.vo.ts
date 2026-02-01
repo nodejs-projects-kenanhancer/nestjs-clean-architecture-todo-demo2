@@ -15,9 +15,7 @@ export class TodoDescription {
     const trimmed = description.trim();
 
     if (trimmed.length > TodoDescription.MAX_LENGTH) {
-      throw new Error(
-        `Description must not exceed ${TodoDescription.MAX_LENGTH} characters`,
-      );
+      throw new Error(`Description must not exceed ${TodoDescription.MAX_LENGTH} characters`);
     }
 
     return new TodoDescription(trimmed || null);

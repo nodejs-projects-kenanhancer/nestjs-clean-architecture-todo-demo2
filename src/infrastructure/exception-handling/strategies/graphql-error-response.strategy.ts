@@ -1,23 +1,21 @@
 import { Injectable } from '@nestjs/common';
+
+import { ApplicationError, ApplicationValidationError } from '../../../application/errors';
 import { BaseError } from '../../../core/errors';
 import { EntryPoint } from '../../../core/types';
 import {
   DomainError,
-  TodoNotFoundError,
   InvalidTodoStatusError,
+  TodoNotFoundError,
   TodoValidationError,
 } from '../../../domain/errors';
-import {
-  ApplicationError,
-  ApplicationValidationError,
-} from '../../../application/errors';
+import { BadRequestError, PresentationError } from '../../../presentation/errors';
 import { InfrastructureError } from '../../errors';
-import { PresentationError, BadRequestError } from '../../../presentation/errors';
 import {
   BaseErrorResponseStrategy,
-  GraphQLErrorResponse,
-  GraphQLErrorClassification,
   ErrorContext,
+  GraphQLErrorClassification,
+  GraphQLErrorResponse,
   ValidationErrorDetail,
 } from './error-response.strategy';
 
@@ -60,10 +58,7 @@ export class GraphQLErrorResponseStrategy extends BaseErrorResponseStrategy<Grap
       return 'NOT_FOUND';
     }
 
-    if (
-      error instanceof TodoValidationError ||
-      error instanceof InvalidTodoStatusError
-    ) {
+    if (error instanceof TodoValidationError || error instanceof InvalidTodoStatusError) {
       return 'BAD_USER_INPUT';
     }
 
@@ -110,9 +105,13 @@ export class GraphQLErrorResponseStrategy extends BaseErrorResponseStrategy<Grap
   private extractValidationErrors(error: BaseError | Error): ValidationErrorDetail[] {
     // Handle ApplicationValidationError with details
     if (error instanceof ApplicationValidationError) {
-      const details = (error as ApplicationValidationError & { details?: Array<{ field: string; message: string }> }).details;
+      const details = (
+        error as ApplicationValidationError & {
+          details?: Array<{ field: string; message: string }>;
+        }
+      ).details;
       if (Array.isArray(details)) {
-        return details.map((detail) => ({
+        return details.map(detail => ({
           field: detail.field,
           message: detail.message,
         }));

@@ -1,5 +1,5 @@
-import { Args, ID, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { Inject } from '@nestjs/common';
+import { Args, ID, Mutation, Query, Resolver } from '@nestjs/graphql';
 
 import {
   CreateTodoUseCase,
@@ -12,12 +12,12 @@ import { GetTodoArgs, ListTodosArgs } from '../args/index.js';
 import { CreateTodoInput, UpdateTodoInput } from '../dtos/inputs/index.js';
 import { DeleteTodoResultType, TodoType } from '../dtos/types/index.js';
 import {
-  GRAPHQL_MAPPER_TOKENS,
   CreateTodoGraphqlMapper,
-  UpdateTodoGraphqlMapper,
   DeleteTodoGraphqlMapper,
+  GRAPHQL_MAPPER_TOKENS,
   GetTodoGraphqlMapper,
   ListTodosGraphqlMapper,
+  UpdateTodoGraphqlMapper,
 } from '../mappers/index.js';
 
 @Resolver(() => TodoType)

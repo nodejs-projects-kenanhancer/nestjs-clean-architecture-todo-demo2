@@ -1,12 +1,13 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+
 import { KafkaService } from '../../../infrastructure/messaging/kafka';
 import {
+  TodoCompletedEvent,
+  TodoCreatedEvent,
+  TodoDeletedEvent,
   TodoEventMessage,
   TodoEventType,
-  TodoCreatedEvent,
   TodoUpdatedEvent,
-  TodoDeletedEvent,
-  TodoCompletedEvent,
 } from '../dtos/events';
 
 @Injectable()
@@ -18,9 +19,7 @@ export class TodoEventHandler implements OnModuleInit {
 
   async onModuleInit(): Promise<void> {
     if (!this.kafkaService.connected) {
-      this.logger.warn(
-        'Kafka not connected, skipping event handler initialization',
-      );
+      this.logger.warn('Kafka not connected, skipping event handler initialization');
       return;
     }
 
@@ -77,17 +76,13 @@ export class TodoEventHandler implements OnModuleInit {
   }
 
   private handleTodoCreated(event: TodoCreatedEvent): Promise<void> {
-    this.logger.log(
-      `Todo created: ${event.payload.id} - ${event.payload.title}`,
-    );
+    this.logger.log(`Todo created: ${event.payload.id} - ${event.payload.title}`);
     // React to the event - e.g., update local cache, trigger notifications, etc.
     return Promise.resolve();
   }
 
   private handleTodoUpdated(event: TodoUpdatedEvent): Promise<void> {
-    this.logger.log(
-      `Todo updated: ${event.payload.id} - ${event.payload.title}`,
-    );
+    this.logger.log(`Todo updated: ${event.payload.id} - ${event.payload.title}`);
     // React to the event
     return Promise.resolve();
   }
@@ -99,9 +94,7 @@ export class TodoEventHandler implements OnModuleInit {
   }
 
   private handleTodoCompleted(event: TodoCompletedEvent): Promise<void> {
-    this.logger.log(
-      `Todo completed: ${event.payload.id} - ${event.payload.title}`,
-    );
+    this.logger.log(`Todo completed: ${event.payload.id} - ${event.payload.title}`);
     // React to the event
     return Promise.resolve();
   }

@@ -1,21 +1,22 @@
-import { Module, Global } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { APP_FILTER } from '@nestjs/core';
+
 import { TODO_REPOSITORY } from '../domain/repositories';
-import { InMemoryTodoRepository } from './persistence/repositories';
-import { KafkaService } from './messaging/kafka';
 import {
-  RestErrorResponseStrategy,
-  GraphQLErrorResponseStrategy,
-  KafkaErrorResponseStrategy,
-  ErrorResponseStrategyFactory,
-} from './exception-handling/strategies';
-import {
-  DomainExceptionFilter,
   ApplicationExceptionFilter,
+  DomainExceptionFilter,
+  GlobalExceptionFilter,
   InfrastructureExceptionFilter,
   PresentationExceptionFilter,
-  GlobalExceptionFilter,
 } from './exception-handling/filters';
+import {
+  ErrorResponseStrategyFactory,
+  GraphQLErrorResponseStrategy,
+  KafkaErrorResponseStrategy,
+  RestErrorResponseStrategy,
+} from './exception-handling/strategies';
+import { KafkaService } from './messaging/kafka';
+import { InMemoryTodoRepository } from './persistence/repositories';
 
 const strategies = [
   RestErrorResponseStrategy,

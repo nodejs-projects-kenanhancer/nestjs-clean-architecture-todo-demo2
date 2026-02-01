@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 
-import { IRestCommandMapper } from '../../../core/contracts/index.js';
 import { UpdateTodoCommand, UpdateTodoResult } from '../../../application/todo/index.js';
+import { IRestCommandMapper } from '../../../core/contracts/index.js';
 import { UpdateTodoRequest } from '../dtos/requests/index.js';
-import { UpdateTodoResponse, TodoResponse } from '../dtos/responses/index.js';
+import { TodoResponse, UpdateTodoResponse } from '../dtos/responses/index.js';
 
 export interface UpdateTodoRequestWithId {
   id: string;
@@ -11,9 +11,12 @@ export interface UpdateTodoRequestWithId {
 }
 
 @Injectable()
-export class UpdateTodoRestMapper
-  implements IRestCommandMapper<UpdateTodoRequestWithId, UpdateTodoCommand, UpdateTodoResult, UpdateTodoResponse>
-{
+export class UpdateTodoRestMapper implements IRestCommandMapper<
+  UpdateTodoRequestWithId,
+  UpdateTodoCommand,
+  UpdateTodoResult,
+  UpdateTodoResponse
+> {
   toCommand(input: UpdateTodoRequestWithId): UpdateTodoCommand {
     return new UpdateTodoCommand(
       input.id,

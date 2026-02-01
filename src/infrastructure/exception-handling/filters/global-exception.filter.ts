@@ -1,12 +1,8 @@
-import {
-  ExceptionFilter,
-  Catch,
-  ArgumentsHost,
-  Logger,
-  HttpException,
-} from '@nestjs/common';
-import { Response, Request } from 'express';
+import { ArgumentsHost, Catch, ExceptionFilter, HttpException, Logger } from '@nestjs/common';
+
+import { Request, Response } from 'express';
 import { GraphQLError } from 'graphql';
+
 import { EntryPoint } from '../../../core/types';
 import { PresentationErrorCode } from '../../../presentation/errors';
 import { ErrorResponseStrategyFactory, RestErrorResponse } from '../strategies';
@@ -24,10 +20,7 @@ interface HttpExceptionResponse {
 const PROBLEM_TYPE_BASE = 'https://api.example.com/problems';
 
 @Catch()
-export class GlobalExceptionFilter
-  extends BaseExceptionFilter
-  implements ExceptionFilter
-{
+export class GlobalExceptionFilter extends BaseExceptionFilter implements ExceptionFilter {
   protected readonly logger = new Logger(GlobalExceptionFilter.name);
 
   constructor(strategyFactory: ErrorResponseStrategyFactory) {
@@ -43,8 +36,7 @@ export class GlobalExceptionFilter
     }
 
     // Handle all other exceptions
-    const error =
-      exception instanceof Error ? exception : new Error('Unknown error');
+    const error = exception instanceof Error ? exception : new Error('Unknown error');
 
     this.logger.error(`Unhandled exception: ${error.message}`, error.stack);
 
@@ -71,7 +63,7 @@ export class GlobalExceptionFilter
       if (Array.isArray(responseObj.message)) {
         // Validation pipe errors come as array
         detail = 'One or more validation errors occurred';
-        validationErrors = responseObj.message.map((msg) => ({
+        validationErrors = responseObj.message.map(msg => ({
           field: 'unknown',
           message: msg,
         }));
@@ -88,9 +80,10 @@ export class GlobalExceptionFilter
       code: this.getHttpExceptionCode(status),
       detail,
       instance: request.url,
-      traceId: (request.headers['x-request-id'] as string) ||
-               (request.headers['x-trace-id'] as string) ||
-               this.generateTraceId(),
+      traceId:
+        (request.headers['x-request-id'] as string) ||
+        (request.headers['x-trace-id'] as string) ||
+        this.generateTraceId(),
       timestamp: new Date().toISOString(),
     };
 

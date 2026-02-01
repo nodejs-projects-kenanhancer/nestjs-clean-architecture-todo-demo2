@@ -1,5 +1,6 @@
-import { InputType, Field } from '@nestjs/graphql';
-import { IsString, IsOptional, MinLength, MaxLength } from 'class-validator';
+import { Field, InputType } from '@nestjs/graphql';
+
+import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 @InputType()
 export class CreateTodoInput {

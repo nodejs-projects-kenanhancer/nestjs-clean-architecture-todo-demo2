@@ -6,15 +6,15 @@ import { EntryPoint } from '../../../core/types';
  * @see https://datatracker.ietf.org/doc/html/rfc7807
  */
 export interface RestErrorResponse {
-  type: string;           // URI reference identifying the problem type
-  title: string;          // Short human-readable summary
-  status: number;         // HTTP status code
-  code: string;           // Machine-readable error code from layer-specific enum
-  detail: string;         // Human-readable explanation specific to this occurrence
-  instance: string;       // URI reference identifying this specific occurrence
-  traceId: string;        // Distributed tracing ID
-  timestamp: string;      // ISO 8601 timestamp
-  errors?: ValidationErrorDetail[];  // For validation errors
+  type: string; // URI reference identifying the problem type
+  title: string; // Short human-readable summary
+  status: number; // HTTP status code
+  code: string; // Machine-readable error code from layer-specific enum
+  detail: string; // Human-readable explanation specific to this occurrence
+  instance: string; // URI reference identifying this specific occurrence
+  traceId: string; // Distributed tracing ID
+  timestamp: string; // ISO 8601 timestamp
+  errors?: ValidationErrorDetail[]; // For validation errors
 }
 
 export interface ValidationErrorDetail {
@@ -109,9 +109,9 @@ export interface ErrorResponseStrategy<T extends ErrorResponse = ErrorResponse> 
   getEntryPoint(): EntryPoint;
 }
 
-export abstract class BaseErrorResponseStrategy<T extends ErrorResponse = ErrorResponse>
-  implements ErrorResponseStrategy<T>
-{
+export abstract class BaseErrorResponseStrategy<
+  T extends ErrorResponse = ErrorResponse,
+> implements ErrorResponseStrategy<T> {
   abstract format(error: BaseError | Error, context?: ErrorContext): T;
   abstract getEntryPoint(): EntryPoint;
 

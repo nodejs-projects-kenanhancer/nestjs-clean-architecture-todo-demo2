@@ -1,14 +1,21 @@
 import { Injectable } from '@nestjs/common';
 
+import {
+  ListTodosQuery,
+  ListTodosResult,
+  TodoItemResult,
+} from '../../../application/todo/index.js';
 import { IGraphqlQueryMapper } from '../../../core/contracts/index.js';
-import { ListTodosQuery, ListTodosResult, TodoItemResult } from '../../../application/todo/index.js';
 import { ListTodosArgs } from '../args/index.js';
 import { TodoType } from '../dtos/types/index.js';
 
 @Injectable()
-export class ListTodosGraphqlMapper
-  implements IGraphqlQueryMapper<ListTodosArgs, ListTodosQuery, ListTodosResult, TodoType[]>
-{
+export class ListTodosGraphqlMapper implements IGraphqlQueryMapper<
+  ListTodosArgs,
+  ListTodosQuery,
+  ListTodosResult,
+  TodoType[]
+> {
   toQuery(args: ListTodosArgs): ListTodosQuery {
     return new ListTodosQuery(args.status);
   }

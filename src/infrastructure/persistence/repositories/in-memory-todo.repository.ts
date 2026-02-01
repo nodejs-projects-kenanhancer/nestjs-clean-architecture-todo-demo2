@@ -1,11 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { TodoRepository } from '../../../domain/repositories';
+
 import { Todo, TodoStatus } from '../../../domain/entities';
-import {
-  TodoId,
-  TodoTitle,
-  TodoDescription,
-} from '../../../domain/value-objects';
+import { TodoRepository } from '../../../domain/repositories';
+import { TodoDescription, TodoId, TodoTitle } from '../../../domain/value-objects';
 import { TodoEntity } from '../entities';
 
 @Injectable()
@@ -22,14 +19,12 @@ export class InMemoryTodoRepository implements TodoRepository {
 
   findAll(): Promise<Todo[]> {
     const entities = Array.from(this.store.values());
-    return Promise.resolve(entities.map((entity) => this.toDomain(entity)));
+    return Promise.resolve(entities.map(entity => this.toDomain(entity)));
   }
 
   findByStatus(status: string): Promise<Todo[]> {
-    const entities = Array.from(this.store.values()).filter(
-      (entity) => entity.status === status,
-    );
-    return Promise.resolve(entities.map((entity) => this.toDomain(entity)));
+    const entities = Array.from(this.store.values()).filter(entity => entity.status === status);
+    return Promise.resolve(entities.map(entity => this.toDomain(entity)));
   }
 
   save(entity: Todo): Promise<Todo> {

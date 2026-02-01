@@ -1,14 +1,13 @@
-import { ExceptionFilter, Catch, ArgumentsHost, Logger } from '@nestjs/common';
+import { ArgumentsHost, Catch, ExceptionFilter, Logger } from '@nestjs/common';
+
 import { GraphQLError } from 'graphql';
+
 import { InfrastructureError } from '../../errors';
 import { ErrorResponseStrategyFactory } from '../strategies';
 import { BaseExceptionFilter } from './base-exception.filter';
 
 @Catch(InfrastructureError)
-export class InfrastructureExceptionFilter
-  extends BaseExceptionFilter
-  implements ExceptionFilter
-{
+export class InfrastructureExceptionFilter extends BaseExceptionFilter implements ExceptionFilter {
   protected readonly logger = new Logger(InfrastructureExceptionFilter.name);
 
   constructor(strategyFactory: ErrorResponseStrategyFactory) {

@@ -1,23 +1,21 @@
 import { Injectable } from '@nestjs/common';
+
+import { ApplicationError, ApplicationValidationError } from '../../../application/errors';
 import { BaseError } from '../../../core/errors';
 import { EntryPoint } from '../../../core/types';
 import {
   DomainError,
-  TodoNotFoundError,
   InvalidTodoStatusError,
+  TodoNotFoundError,
   TodoValidationError,
 } from '../../../domain/errors';
-import {
-  ApplicationError,
-  ApplicationValidationError,
-} from '../../../application/errors';
-import { InfrastructureError, DatabaseError, KafkaError } from '../../errors';
 import { PresentationError } from '../../../presentation/errors';
+import { DatabaseError, InfrastructureError, KafkaError } from '../../errors';
 import {
   BaseErrorResponseStrategy,
+  ErrorContext,
   KafkaErrorResponse,
   KafkaErrorType,
-  ErrorContext,
 } from './error-response.strategy';
 
 /**

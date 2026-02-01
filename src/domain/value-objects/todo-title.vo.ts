@@ -12,15 +12,11 @@ export class TodoTitle {
     const trimmed = title?.trim() ?? '';
 
     if (trimmed.length < TodoTitle.MIN_LENGTH) {
-      throw new Error(
-        `Title must be at least ${TodoTitle.MIN_LENGTH} character(s)`,
-      );
+      throw new Error(`Title must be at least ${TodoTitle.MIN_LENGTH} character(s)`);
     }
 
     if (trimmed.length > TodoTitle.MAX_LENGTH) {
-      throw new Error(
-        `Title must not exceed ${TodoTitle.MAX_LENGTH} characters`,
-      );
+      throw new Error(`Title must not exceed ${TodoTitle.MAX_LENGTH} characters`);
     }
 
     return new TodoTitle(trimmed);

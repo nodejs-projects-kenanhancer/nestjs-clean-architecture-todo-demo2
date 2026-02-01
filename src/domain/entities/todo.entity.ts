@@ -1,4 +1,4 @@
-import { TodoId, TodoTitle, TodoDescription } from '../value-objects';
+import { TodoDescription, TodoId, TodoTitle } from '../value-objects';
 
 export enum TodoStatus {
   PENDING = 'PENDING',
@@ -42,10 +42,7 @@ export class Todo {
     return this.props.updatedAt;
   }
 
-  static create(props: {
-    title: TodoTitle;
-    description?: TodoDescription;
-  }): Todo {
+  static create(props: { title: TodoTitle; description?: TodoDescription }): Todo {
     const now = new Date();
     return new Todo({
       id: TodoId.create(),

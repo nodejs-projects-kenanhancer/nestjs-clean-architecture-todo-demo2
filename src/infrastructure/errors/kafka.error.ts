@@ -1,5 +1,5 @@
-import { InfrastructureError } from './infrastructure.error';
 import { InfrastructureErrorCode } from './error-codes';
+import { InfrastructureError } from './infrastructure.error';
 
 export class KafkaError extends InfrastructureError {
   constructor(operation: string, message: string) {

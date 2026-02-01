@@ -1,15 +1,16 @@
 import { Injectable } from '@nestjs/common';
+
 import { EntryPoint } from '../../../core/types';
 import {
-  ErrorResponseStrategy,
   ErrorResponse,
-  RestErrorResponse,
+  ErrorResponseStrategy,
   GraphQLErrorResponse,
   KafkaErrorResponse,
+  RestErrorResponse,
 } from './error-response.strategy';
-import { RestErrorResponseStrategy } from './rest-error-response.strategy';
 import { GraphQLErrorResponseStrategy } from './graphql-error-response.strategy';
 import { KafkaErrorResponseStrategy } from './kafka-error-response.strategy';
+import { RestErrorResponseStrategy } from './rest-error-response.strategy';
 
 @Injectable()
 export class ErrorResponseStrategyFactory {

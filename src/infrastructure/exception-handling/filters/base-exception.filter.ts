@@ -1,16 +1,18 @@
 import { ArgumentsHost, Logger } from '@nestjs/common';
 import { GqlContextType } from '@nestjs/graphql';
-import { Response, Request } from 'express';
+
+import { Request, Response } from 'express';
 import { GraphQLError } from 'graphql';
+
 import { BaseError } from '../../../core/errors';
 import { EntryPoint } from '../../../core/types';
 import {
-  ErrorResponseStrategyFactory,
+  ErrorContext,
   ErrorResponse,
-  RestErrorResponse,
+  ErrorResponseStrategyFactory,
   GraphQLErrorResponse,
   KafkaErrorResponse,
-  ErrorContext,
+  RestErrorResponse,
 } from '../strategies';
 
 export abstract class BaseExceptionFilter {
@@ -56,8 +58,8 @@ export abstract class BaseExceptionFilter {
       context.path = request.url;
       context.method = request.method;
       // In production, extract traceId from request headers (e.g., X-Request-Id, X-Trace-Id)
-      context.traceId = (request.headers['x-request-id'] as string) ||
-                        (request.headers['x-trace-id'] as string);
+      context.traceId =
+        (request.headers['x-request-id'] as string) || (request.headers['x-trace-id'] as string);
     }
 
     if (entryPoint === EntryPoint.KAFKA) {

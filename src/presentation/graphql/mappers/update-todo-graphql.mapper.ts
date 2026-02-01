@@ -1,14 +1,17 @@
 import { Injectable } from '@nestjs/common';
 
-import { IGraphqlMutationMapper } from '../../../core/contracts/index.js';
 import { UpdateTodoCommand, UpdateTodoResult } from '../../../application/todo/index.js';
+import { IGraphqlMutationMapper } from '../../../core/contracts/index.js';
 import { UpdateTodoInput } from '../dtos/inputs/index.js';
 import { TodoType } from '../dtos/types/index.js';
 
 @Injectable()
-export class UpdateTodoGraphqlMapper
-  implements IGraphqlMutationMapper<UpdateTodoInput, UpdateTodoCommand, UpdateTodoResult, TodoType>
-{
+export class UpdateTodoGraphqlMapper implements IGraphqlMutationMapper<
+  UpdateTodoInput,
+  UpdateTodoCommand,
+  UpdateTodoResult,
+  TodoType
+> {
   toCommand(input: UpdateTodoInput): UpdateTodoCommand {
     return new UpdateTodoCommand(input.id, input.title, input.description, input.status);
   }
