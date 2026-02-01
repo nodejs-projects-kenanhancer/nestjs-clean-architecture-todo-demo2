@@ -104,47 +104,133 @@ This project implements **Clean Architecture** (also known as Onion Architecture
 └───────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Data Flow with Mappers
+### Data Flow & Type Conversions Across All Layers
 
-Mappers are **owned by the outer layer** and convert between layer-specific types:
+Each layer boundary requires type conversion. **Outer layers own their mappers** to convert to/from inner layer types:
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                           REQUEST FLOW (Inward)                                 │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                 │
-│  REST Request          Mapper                 Application          Domain      │
-│  ┌──────────┐         ┌──────────┐           ┌──────────┐        ┌──────────┐ │
-│  │CreateTodo│         │toCommand │           │CreateTodo│        │   Todo   │ │
-│  │ Request  │────────▶│    ()    │──────────▶│ Command  │───────▶│ Entity   │ │
-│  │  (DTO)   │         │          │           │          │        │          │ │
-│  └──────────┘         └──────────┘           └──────────┘        └──────────┘ │
-│       │                                                                        │
-│       │  Presentation Layer      │       Application Layer    │  Domain Layer │
-│       │  owns these types        │       owns these types     │  owns these   │
-│                                                                                 │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│                           RESPONSE FLOW (Outward)                               │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                 │
-│  REST Response         Mapper                 Application          Domain      │
-│  ┌──────────┐         ┌──────────┐           ┌──────────┐        ┌──────────┐ │
-│  │CreateTodo│         │toResponse│           │CreateTodo│        │   Todo   │ │
-│  │ Response │◀────────│    ()    │◀──────────│  Result  │◀───────│ Entity   │ │
-│  │  (DTO)   │         │          │           │          │        │          │ │
-│  └──────────┘         └──────────┘           └──────────┘        └──────────┘ │
-│                                                                                 │
-└─────────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                        COMPLETE REQUEST/RESPONSE FLOW                               │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+
+ PRESENTATION          APPLICATION              DOMAIN              INFRASTRUCTURE
+ (REST/GraphQL)        (Use Cases)              (Business)          (Persistence)
+ ───────────────       ─────────────            ──────────          ─────────────────
+
+     Request           Command                  Entity               Persistence
+    ┌────────┐        ┌────────┐              ┌────────┐            ┌────────┐
+    │ Create │        │ Create │              │  Todo  │            │ Todo   │
+    │  Todo  │        │  Todo  │              │ Entity │            │ Record │
+    │Request │        │Command │              │        │            │ (DB)   │
+    └───┬────┘        └───┬────┘              └───┬────┘            └───┬────┘
+        │                 │                      │                     │
+        │   ┌─────────┐   │                      │                     │
+        │   │ Mapper  │   │    ┌──────────┐      │    ┌──────────┐    │
+        └──▶│toCommand│───┴───▶│ Use Case │──────┴───▶│Repository│────┘
+            │   ()    │        │execute() │           │  save()  │
+            └─────────┘        └────┬─────┘           └────┬─────┘
+                                    │                      │
+        ┌───────────────────────────┘                      │
+        │                                                  │
+        │   ┌──────────┐       ┌────────┐                 │
+        │   │  Result  │       │  Todo  │                 │
+        │   │ fromEnt- │◀──────│ Entity │◀────────────────┘
+        │   │  ity()   │       │        │      toDomain()
+        │   └────┬─────┘       └────────┘      (in Repository)
+        │        │
+        │        │ Result
+        ▼        ▼
+    ┌─────────┐  ┌────────┐
+    │ Mapper  │  │ Create │
+    │toRespon-│◀─│  Todo  │
+    │  se()   │  │ Result │
+    └────┬────┘  └────────┘
+         │
+         ▼
+    ┌────────┐
+    │ Create │
+    │  Todo  │
+    │Response│
+    └────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                         TYPE CONVERSIONS AT EACH BOUNDARY                           │
+├─────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                     │
+│  BOUNDARY                    CONVERSION                      WHO OWNS IT            │
+│  ─────────────────────────────────────────────────────────────────────────────────  │
+│                                                                                     │
+│  Presentation → Application  Request DTO → Command          Presentation Layer     │
+│                              (via Mapper.toCommand())       (owns Mapper)           │
+│                                                                                     │
+│  Application → Domain        Command → Entity               Application Layer      │
+│                              (via Todo.create())            (Use Case calls         │
+│                                                              domain factory)        │
+│                                                                                     │
+│  Domain → Infrastructure     Entity → Persistence Model     Infrastructure Layer   │
+│                              (via toPersistence())          (Repository impl)       │
+│                                                                                     │
+│  Infrastructure → Domain     Persistence Model → Entity     Infrastructure Layer   │
+│                              (via toDomain())               (Repository impl)       │
+│                                                                                     │
+│  Domain → Application        Entity → Result                Application Layer      │
+│                              (via Result.fromEntity())      (Use Case creates       │
+│                                                              Result)                │
+│                                                                                     │
+│  Application → Presentation  Result → Response DTO          Presentation Layer     │
+│                              (via Mapper.toResponse())      (owns Mapper)           │
+│                                                                                     │
+└─────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Why Mappers Live in the Outer Layer
+### Example: Complete Create Todo Flow
 
-| Aspect | Explanation |
-|--------|-------------|
-| **Dependency Rule** | Outer layers depend on inner layers. Mappers know about both their own DTOs AND application types. |
-| **Type Ownership** | Each layer owns its types. REST owns `CreateTodoRequest`, Application owns `CreateTodoCommand`. |
-| **No Leakage** | Application layer never knows about REST DTOs, GraphQL inputs, or Kafka messages. |
-| **Flexibility** | You can add a new presentation layer (gRPC) without changing application or domain code. |
+```typescript
+// 1. PRESENTATION LAYER - Controller receives HTTP request
+@Post()
+async create(@Body() request: CreateTodoRequest): Promise<CreateTodoResponse> {
+  // 2. Mapper converts Presentation type → Application type
+  const command = this.mapper.toCommand(request);  // CreateTodoRequest → CreateTodoCommand
+
+  // 3. APPLICATION LAYER - Use Case orchestrates
+  const result = await this.createTodoUseCase.execute(command);
+
+  // 4. Mapper converts Application type → Presentation type
+  return this.mapper.toResponse(result);  // CreateTodoResult → CreateTodoResponse
+}
+
+// Inside CreateTodoUseCase.execute():
+async execute(command: CreateTodoCommand): Promise<CreateTodoResult> {
+  // 5. DOMAIN LAYER - Create entity from command data
+  const todo = Todo.create(command.title, command.description);  // Command → Entity
+
+  // 6. INFRASTRUCTURE LAYER - Repository persists (may convert to DB model internally)
+  const saved = await this.todoRepository.save(todo);  // Entity → DB → Entity
+
+  // 7. APPLICATION LAYER - Convert entity to result
+  return CreateTodoResult.fromEntity(saved);  // Entity → Result
+}
+
+// Inside InMemoryTodoRepository (Infrastructure):
+async save(todo: Todo): Promise<Todo> {
+  // Convert domain entity to persistence model (if needed)
+  const record = this.toPersistence(todo);  // Entity → Persistence Model
+  this.storage.set(record.id, record);
+
+  // Convert back to domain entity
+  return this.toDomain(record);  // Persistence Model → Entity
+}
+```
+
+### Why Each Layer Owns Its Mappers
+
+| Layer | Owns Mappers For | Reason |
+|-------|------------------|--------|
+| **Presentation** | DTO ↔ Command/Result | Knows HTTP/GraphQL specifics (serialization, validation decorators) |
+| **Application** | Command → Entity, Entity → Result | Orchestrates domain operations, creates results |
+| **Infrastructure** | Entity ↔ Persistence Model | Knows database specifics (ORM entities, column mappings) |
+| **Domain** | None (pure) | No external dependencies, only business logic |
 
 ## Principles
 
