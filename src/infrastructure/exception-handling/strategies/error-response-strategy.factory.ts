@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
-import { EntryPoint } from '../../../core/types';
+import { EntryPoint } from '@core/types';
+
 import {
   ErrorResponse,
   ErrorResponseStrategy,

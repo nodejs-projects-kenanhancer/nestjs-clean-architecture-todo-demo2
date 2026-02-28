@@ -1,7 +1,8 @@
 import { Global, Module } from '@nestjs/common';
 import { APP_FILTER } from '@nestjs/core';
 
-import { TODO_REPOSITORY } from '../domain/repositories';
+import { TODO_REPOSITORY } from '@domain/repositories';
+
 import {
   ApplicationExceptionFilter,
   DomainExceptionFilter,

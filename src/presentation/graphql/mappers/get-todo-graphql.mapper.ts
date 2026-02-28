@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 
-import { GetTodoByIdQuery, GetTodoByIdResult } from '../../../application/todo/index.js';
-import { IGraphqlQueryMapper } from '../../../core/contracts/index.js';
+import { GetTodoByIdQuery, GetTodoByIdResult } from '@application/todo/index.js';
+import { IGraphqlQueryMapper } from '@core/contracts/index.js';
+
 import { GetTodoArgs } from '../args/index.js';
 import { TodoType } from '../dtos/types/index.js';
 

@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 
-import { DeleteTodoCommand, DeleteTodoResult } from '../../../application/todo/index.js';
-import { IRestCommandMapper } from '../../../core/contracts/index.js';
+import { DeleteTodoCommand, DeleteTodoResult } from '@application/todo/index.js';
+import { IRestCommandMapper } from '@core/contracts/index.js';
+
 import { DeleteTodoResponse } from '../dtos/responses/index.js';
 
 export interface DeleteTodoParams {

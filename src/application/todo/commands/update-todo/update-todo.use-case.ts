@@ -1,15 +1,16 @@
 import { Inject, Injectable } from '@nestjs/common';
 
-import type { UseCase } from '../../../../core/contracts/index.js';
-import { TodoStatus } from '../../../../domain/entities/index.js';
+import type { UseCase } from '@core/contracts/index.js';
+import { TodoStatus } from '@domain/entities/index.js';
 import {
   InvalidTodoStatusError,
   TodoNotFoundError,
   TodoValidationError,
-} from '../../../../domain/errors/index.js';
-import { TODO_REPOSITORY } from '../../../../domain/repositories/index.js';
-import type { TodoRepository } from '../../../../domain/repositories/index.js';
-import { TodoDescription, TodoId, TodoTitle } from '../../../../domain/value-objects/index.js';
+} from '@domain/errors/index.js';
+import { TODO_REPOSITORY } from '@domain/repositories/index.js';
+import type { TodoRepository } from '@domain/repositories/index.js';
+import { TodoDescription, TodoId, TodoTitle } from '@domain/value-objects/index.js';
+
 import { UpdateTodoCommand } from './update-todo.command.js';
 import { UpdateTodoResult } from './update-todo.result.js';
 

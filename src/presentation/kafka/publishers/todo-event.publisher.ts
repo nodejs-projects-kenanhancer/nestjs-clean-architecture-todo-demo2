@@ -1,13 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 
+import { CompleteTodoResult, CreateTodoResult, UpdateTodoResult } from '@application/todo/index.js';
+import { KafkaService } from '@infrastructure/messaging/kafka/index.js';
 import { v4 as uuidv4 } from 'uuid';
 
-import {
-  CompleteTodoResult,
-  CreateTodoResult,
-  UpdateTodoResult,
-} from '../../../application/todo/index.js';
-import { KafkaService } from '../../../infrastructure/messaging/kafka/index.js';
 import {
   TodoCompletedEvent,
   TodoCreatedEvent,

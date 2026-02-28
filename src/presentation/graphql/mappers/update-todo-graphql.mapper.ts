@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 
-import { UpdateTodoCommand, UpdateTodoResult } from '../../../application/todo/index.js';
-import { IGraphqlMutationMapper } from '../../../core/contracts/index.js';
+import { UpdateTodoCommand, UpdateTodoResult } from '@application/todo/index.js';
+import { IGraphqlMutationMapper } from '@core/contracts/index.js';
+
 import { UpdateTodoInput } from '../dtos/inputs/index.js';
 import { TodoType } from '../dtos/types/index.js';
 

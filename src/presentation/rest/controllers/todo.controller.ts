@@ -18,7 +18,8 @@ import {
   GetTodoByIdUseCase,
   ListTodosUseCase,
   UpdateTodoUseCase,
-} from '../../../application/todo/index.js';
+} from '@application/todo/index.js';
+
 import { CreateTodoRequest, UpdateTodoRequest } from '../dtos/requests/index.js';
 import {
   CreateTodoResponse,

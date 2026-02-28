@@ -1,8 +1,8 @@
 import { ArgumentsHost, Catch, ExceptionFilter, Logger } from '@nestjs/common';
 
+import { PresentationError } from '@presentation/errors';
 import { GraphQLError } from 'graphql';
 
-import { PresentationError } from '../../../presentation/errors';
 import { ErrorResponseStrategyFactory } from '../strategies';
 import { BaseExceptionFilter } from './base-exception.filter';
 

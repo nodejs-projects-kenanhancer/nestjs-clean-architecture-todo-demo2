@@ -2,9 +2,9 @@ import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { Module } from '@nestjs/common';
 import { GraphQLModule as NestGraphQLModule } from '@nestjs/graphql';
 
+import { ApplicationModule } from '@application/application.module';
 import { join } from 'path';
 
-import { ApplicationModule } from '../../application/application.module';
 import {
   CreateTodoGraphqlMapper,
   DeleteTodoGraphqlMapper,

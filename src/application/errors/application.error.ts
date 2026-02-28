@@ -1,4 +1,4 @@
-import { BaseError, ErrorContext } from '../../core/errors';
+import { BaseError, ErrorContext } from '@core/errors';
 
 export abstract class ApplicationError extends BaseError {
   constructor(code: string, message: string, context?: ErrorContext) {

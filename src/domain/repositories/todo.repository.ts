@@ -1,4 +1,5 @@
-import { Repository } from '../../core/contracts';
+import { Repository } from '@core/contracts';
+
 import { Todo } from '../entities';
 import { TodoId } from '../value-objects';
 

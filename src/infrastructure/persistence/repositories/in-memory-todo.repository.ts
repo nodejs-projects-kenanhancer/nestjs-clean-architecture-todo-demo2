@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 
-import { Todo, TodoStatus } from '../../../domain/entities';
-import { TodoRepository } from '../../../domain/repositories';
-import { TodoDescription, TodoId, TodoTitle } from '../../../domain/value-objects';
+import { Todo, TodoStatus } from '@domain/entities';
+import { TodoRepository } from '@domain/repositories';
+import { TodoDescription, TodoId, TodoTitle } from '@domain/value-objects';
+
 import { TodoEntity } from '../entities';
 
 @Injectable()

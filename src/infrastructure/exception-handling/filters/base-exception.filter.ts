@@ -1,11 +1,11 @@
 import { ArgumentsHost, Logger } from '@nestjs/common';
 import { GqlContextType } from '@nestjs/graphql';
 
+import { BaseError } from '@core/errors';
+import { EntryPoint } from '@core/types';
 import { Request, Response } from 'express';
 import { GraphQLError } from 'graphql';
 
-import { BaseError } from '../../../core/errors';
-import { EntryPoint } from '../../../core/types';
 import {
   ErrorContext,
   ErrorResponse,

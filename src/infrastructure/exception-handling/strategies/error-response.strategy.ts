@@ -1,5 +1,5 @@
-import { BaseError } from '../../../core/errors';
-import { EntryPoint } from '../../../core/types';
+import { BaseError } from '@core/errors';
+import { EntryPoint } from '@core/types';
 
 /**
  * RFC 7807 Problem Details for REST APIs

@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 
-import { KafkaService } from '../../../infrastructure/messaging/kafka';
+import { KafkaService } from '@infrastructure/messaging/kafka';
+
 import {
   TodoCompletedEvent,
   TodoCreatedEvent,

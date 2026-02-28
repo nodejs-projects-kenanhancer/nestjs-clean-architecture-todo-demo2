@@ -1,10 +1,10 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, Logger } from '@nestjs/common';
 
+import { EntryPoint } from '@core/types';
+import { PresentationErrorCode } from '@presentation/errors';
 import { Request, Response } from 'express';
 import { GraphQLError } from 'graphql';
 
-import { EntryPoint } from '../../../core/types';
-import { PresentationErrorCode } from '../../../presentation/errors';
 import { ErrorResponseStrategyFactory, RestErrorResponse } from '../strategies';
 import { BaseExceptionFilter } from './base-exception.filter';
 

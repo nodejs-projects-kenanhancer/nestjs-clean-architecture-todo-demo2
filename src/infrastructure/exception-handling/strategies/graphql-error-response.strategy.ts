@@ -1,15 +1,16 @@
 import { Injectable } from '@nestjs/common';
 
-import { ApplicationError, ApplicationValidationError } from '../../../application/errors';
-import { BaseError } from '../../../core/errors';
-import { EntryPoint } from '../../../core/types';
+import { ApplicationError, ApplicationValidationError } from '@application/errors';
+import { BaseError } from '@core/errors';
+import { EntryPoint } from '@core/types';
 import {
   DomainError,
   InvalidTodoStatusError,
   TodoNotFoundError,
   TodoValidationError,
-} from '../../../domain/errors';
-import { BadRequestError, PresentationError } from '../../../presentation/errors';
+} from '@domain/errors';
+import { BadRequestError, PresentationError } from '@presentation/errors';
+
 import { InfrastructureError } from '../../errors';
 import {
   BaseErrorResponseStrategy,
