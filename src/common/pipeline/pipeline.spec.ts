@@ -1,5 +1,5 @@
-import { IMiddleware, NextFunction } from './middleware.interface.js';
-import { Pipeline } from './pipeline.js';
+import { IMiddleware, NextFunction } from './middleware.interface';
+import { Pipeline } from './pipeline';
 
 interface OrderCommand {
   orderId: string;

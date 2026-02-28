@@ -1,13 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 
-import type { UseCase } from '@core/contracts/index.js';
-import { TodoNotFoundError } from '@domain/errors/index.js';
-import { TODO_REPOSITORY } from '@domain/repositories/index.js';
-import type { TodoRepository } from '@domain/repositories/index.js';
-import { TodoId } from '@domain/value-objects/index.js';
+import type { UseCase } from '@core/contracts';
+import { TodoNotFoundError } from '@domain/errors';
+import { TODO_REPOSITORY } from '@domain/repositories';
+import type { TodoRepository } from '@domain/repositories';
+import { TodoId } from '@domain/value-objects';
 
-import { DeleteTodoCommand } from './delete-todo.command.js';
-import { DeleteTodoResult } from './delete-todo.result.js';
+import { DeleteTodoCommand } from './delete-todo.command';
+import { DeleteTodoResult } from './delete-todo.result';
 
 @Injectable()
 export class DeleteTodoUseCase implements UseCase<DeleteTodoCommand, DeleteTodoResult> {

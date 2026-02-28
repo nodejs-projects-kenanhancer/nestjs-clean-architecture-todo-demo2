@@ -1,4 +1,4 @@
-import { Todo } from '@domain/entities/index.js';
+import { Todo } from '@domain/entities';
 
 export class CompleteTodoResult {
   constructor(

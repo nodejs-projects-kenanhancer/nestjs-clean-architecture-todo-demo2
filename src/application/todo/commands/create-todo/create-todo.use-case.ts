@@ -1,14 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
 
-import type { UseCase } from '@core/contracts/index.js';
-import { Todo } from '@domain/entities/index.js';
-import { TodoValidationError } from '@domain/errors/index.js';
-import { TODO_REPOSITORY } from '@domain/repositories/index.js';
-import type { TodoRepository } from '@domain/repositories/index.js';
-import { TodoDescription, TodoTitle } from '@domain/value-objects/index.js';
+import type { UseCase } from '@core/contracts';
+import { Todo } from '@domain/entities';
+import { TodoValidationError } from '@domain/errors';
+import { TODO_REPOSITORY } from '@domain/repositories';
+import type { TodoRepository } from '@domain/repositories';
+import { TodoDescription, TodoTitle } from '@domain/value-objects';
 
-import { CreateTodoCommand } from './create-todo.command.js';
-import { CreateTodoResult } from './create-todo.result.js';
+import { CreateTodoCommand } from './create-todo.command';
+import { CreateTodoResult } from './create-todo.result';
 
 @Injectable()
 export class CreateTodoUseCase implements UseCase<CreateTodoCommand, CreateTodoResult> {

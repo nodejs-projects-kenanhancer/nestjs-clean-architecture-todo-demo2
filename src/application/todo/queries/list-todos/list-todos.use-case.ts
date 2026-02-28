@@ -1,11 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 
-import type { UseCase } from '@core/contracts/index.js';
-import { TODO_REPOSITORY } from '@domain/repositories/index.js';
-import type { TodoRepository } from '@domain/repositories/index.js';
+import type { UseCase } from '@core/contracts';
+import { TODO_REPOSITORY } from '@domain/repositories';
+import type { TodoRepository } from '@domain/repositories';
 
-import { ListTodosQuery } from './list-todos.query.js';
-import { ListTodosResult } from './list-todos.result.js';
+import { ListTodosQuery } from './list-todos.query';
+import { ListTodosResult } from './list-todos.result';
 
 @Injectable()
 export class ListTodosUseCase implements UseCase<ListTodosQuery, ListTodosResult> {

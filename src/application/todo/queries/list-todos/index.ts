@@ -1,3 +1,3 @@
-export * from './list-todos.query.js';
-export * from './list-todos.result.js';
-export * from './list-todos.use-case.js';
+export * from './list-todos.query';
+export * from './list-todos.result';
+export * from './list-todos.use-case';

@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 
-import { ListTodosQuery, ListTodosResult, TodoItemResult } from '@application/todo/index.js';
-import { IRestQueryMapper } from '@core/contracts/index.js';
+import { ListTodosQuery, ListTodosResult, TodoItemResult } from '@application/todo';
+import { IRestQueryMapper } from '@core/contracts';
 
-import { ListTodosResponse, TodoResponse } from '../dtos/responses/index.js';
+import { ListTodosResponse, TodoResponse } from '../dtos/responses';
 
 export interface ListTodosParams {
   status?: string;

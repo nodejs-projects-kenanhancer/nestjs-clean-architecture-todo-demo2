@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 
-import { CompleteTodoResult, CreateTodoResult, UpdateTodoResult } from '@application/todo/index.js';
-import { KafkaService } from '@infrastructure/messaging/kafka/index.js';
+import { CompleteTodoResult, CreateTodoResult, UpdateTodoResult } from '@application/todo';
+import { KafkaService } from '@infrastructure/messaging/kafka';
 import { v4 as uuidv4 } from 'uuid';
 
 import {
@@ -13,7 +13,7 @@ import {
   TodoEventPayload,
   TodoEventType,
   TodoUpdatedEvent,
-} from '../dtos/events/index.js';
+} from '../dtos/events';
 
 type TodoResultLike = {
   id: string;

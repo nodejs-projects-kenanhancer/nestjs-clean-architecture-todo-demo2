@@ -1,3 +1,3 @@
-export * from './todo-created.event.js';
-export * from './todo-completed.event.js';
-export * from './todo-deleted.event.js';
+export * from './todo-created.event';
+export * from './todo-completed.event';
+export * from './todo-deleted.event';

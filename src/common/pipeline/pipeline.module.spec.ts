@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 
-import { IMiddleware, NextFunction } from './middleware.interface.js';
-import { GLOBAL_PIPELINE } from './pipeline.constants.js';
-import { PipelineModule } from './pipeline.module.js';
-import { PipelineResolver } from './pipeline.resolver.js';
+import { IMiddleware, NextFunction } from './middleware.interface';
+import { GLOBAL_PIPELINE } from './pipeline.constants';
+import { PipelineModule } from './pipeline.module';
+import { PipelineResolver } from './pipeline.resolver';
 
 interface OrderCommand {
   orderId: string;

@@ -2,13 +2,13 @@ import { Injectable } from '@nestjs/common';
 
 import 'reflect-metadata';
 
-import { IMiddleware, NextFunction } from './middleware.interface.js';
+import { IMiddleware, NextFunction } from './middleware.interface';
 import {
   CLASS_PIPELINE_METADATA,
   METHOD_PIPELINE_METADATA,
   MODULE_PIPELINE_METADATA,
-} from './pipeline.constants.js';
-import { PipelineModuleDecorator, UseModulePipeline, UsePipeline } from './pipeline.decorator.js';
+} from './pipeline.constants';
+import { PipelineModuleDecorator, UseModulePipeline, UsePipeline } from './pipeline.decorator';
 
 interface OrderCommand {
   orderId: string;

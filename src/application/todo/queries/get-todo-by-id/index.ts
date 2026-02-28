@@ -1,3 +1,3 @@
-export * from './get-todo-by-id.query.js';
-export * from './get-todo-by-id.result.js';
-export * from './get-todo-by-id.use-case.js';
+export * from './get-todo-by-id.query';
+export * from './get-todo-by-id.result';
+export * from './get-todo-by-id.use-case';

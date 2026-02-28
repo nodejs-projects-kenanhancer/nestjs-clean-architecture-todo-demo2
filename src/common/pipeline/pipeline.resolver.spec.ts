@@ -3,10 +3,10 @@ import { Test } from '@nestjs/testing';
 
 import 'reflect-metadata';
 
-import { IMiddleware, NextFunction } from './middleware.interface.js';
-import { GLOBAL_PIPELINE } from './pipeline.constants.js';
-import { UseModulePipeline, UsePipeline } from './pipeline.decorator.js';
-import { PipelineResolver } from './pipeline.resolver.js';
+import { IMiddleware, NextFunction } from './middleware.interface';
+import { GLOBAL_PIPELINE } from './pipeline.constants';
+import { UseModulePipeline, UsePipeline } from './pipeline.decorator';
+import { PipelineResolver } from './pipeline.resolver';
 
 interface OrderCommand {
   orderId: string;

@@ -1,8 +1,8 @@
 import { DynamicModule, Global, Module } from '@nestjs/common';
 
-import { MiddlewareEntry, isMiddlewareClass } from './middleware.interface.js';
-import { GLOBAL_PIPELINE, PIPELINE_RESOLVER } from './pipeline.constants.js';
-import { PipelineResolver } from './pipeline.resolver.js';
+import { MiddlewareEntry, isMiddlewareClass } from './middleware.interface';
+import { GLOBAL_PIPELINE, PIPELINE_RESOLVER } from './pipeline.constants';
+import { PipelineResolver } from './pipeline.resolver';
 
 @Global()
 @Module({})

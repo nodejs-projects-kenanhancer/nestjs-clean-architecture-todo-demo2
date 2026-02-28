@@ -1,3 +1,3 @@
-export * from './complete-todo.command.js';
-export * from './complete-todo.result.js';
-export * from './complete-todo.use-case.js';
+export * from './complete-todo.command';
+export * from './complete-todo.result';
+export * from './complete-todo.use-case';

@@ -1,4 +1,4 @@
-import { IMiddleware, NextFunction } from './middleware.interface.js';
+import { IMiddleware, NextFunction } from './middleware.interface';
 
 export class Pipeline<TInput = unknown, TOutput = unknown> {
   private readonly middlewares: IMiddleware<TInput, TOutput>[] = [];

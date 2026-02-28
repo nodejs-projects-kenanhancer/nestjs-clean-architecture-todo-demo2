@@ -1,2 +1,2 @@
-export * from './get-todo-by-id/index.js';
-export * from './list-todos/index.js';
+export * from './get-todo-by-id';
+export * from './list-todos';

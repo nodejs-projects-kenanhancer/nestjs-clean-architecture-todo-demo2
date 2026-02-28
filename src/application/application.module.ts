@@ -7,7 +7,7 @@ import {
   GetTodoByIdUseCase,
   ListTodosUseCase,
   UpdateTodoUseCase,
-} from './todo/index.js';
+} from './todo';
 
 const useCases = [
   CreateTodoUseCase,

@@ -2,12 +2,12 @@ import { Module, type ModuleMetadata } from '@nestjs/common';
 
 import 'reflect-metadata';
 
-import { MiddlewareEntry } from './middleware.interface.js';
+import { MiddlewareEntry } from './middleware.interface';
 import {
   CLASS_PIPELINE_METADATA,
   METHOD_PIPELINE_METADATA,
   MODULE_PIPELINE_METADATA,
-} from './pipeline.constants.js';
+} from './pipeline.constants';
 
 export function UsePipeline(...entries: MiddlewareEntry[]): ClassDecorator & MethodDecorator {
   return (

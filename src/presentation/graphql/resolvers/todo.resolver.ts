@@ -7,11 +7,11 @@ import {
   GetTodoByIdUseCase,
   ListTodosUseCase,
   UpdateTodoUseCase,
-} from '@application/todo/index.js';
+} from '@application/todo';
 
-import { GetTodoArgs, ListTodosArgs } from '../args/index.js';
-import { CreateTodoInput, UpdateTodoInput } from '../dtos/inputs/index.js';
-import { DeleteTodoResultType, TodoType } from '../dtos/types/index.js';
+import { GetTodoArgs, ListTodosArgs } from '../args';
+import { CreateTodoInput, UpdateTodoInput } from '../dtos/inputs';
+import { DeleteTodoResultType, TodoType } from '../dtos/types';
 import {
   CreateTodoGraphqlMapper,
   DeleteTodoGraphqlMapper,
@@ -19,7 +19,7 @@ import {
   GetTodoGraphqlMapper,
   ListTodosGraphqlMapper,
   UpdateTodoGraphqlMapper,
-} from '../mappers/index.js';
+} from '../mappers';
 
 @Resolver(() => TodoType)
 export class TodoResolver {

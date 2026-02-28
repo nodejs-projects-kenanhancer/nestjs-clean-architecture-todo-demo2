@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 
-import { CreateTodoCommand, CreateTodoResult } from '@application/todo/index.js';
-import { IRestCommandMapper } from '@core/contracts/index.js';
+import { CreateTodoCommand, CreateTodoResult } from '@application/todo';
+import { IRestCommandMapper } from '@core/contracts';
 
-import { CreateTodoRequest } from '../dtos/requests/index.js';
-import { CreateTodoResponse, TodoResponse } from '../dtos/responses/index.js';
+import { CreateTodoRequest } from '../dtos/requests';
+import { CreateTodoResponse, TodoResponse } from '../dtos/responses';
 
 @Injectable()
 export class CreateTodoRestMapper implements IRestCommandMapper<

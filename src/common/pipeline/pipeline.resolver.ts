@@ -1,14 +1,14 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 
-import { IMiddleware, MiddlewareEntry, isMiddlewareClass } from './middleware.interface.js';
+import { IMiddleware, MiddlewareEntry, isMiddlewareClass } from './middleware.interface';
+import { Pipeline } from './pipeline';
 import {
   CLASS_PIPELINE_METADATA,
   GLOBAL_PIPELINE,
   METHOD_PIPELINE_METADATA,
   MODULE_PIPELINE_METADATA,
-} from './pipeline.constants.js';
-import { Pipeline } from './pipeline.js';
+} from './pipeline.constants';
 
 @Injectable()
 export class PipelineResolver {

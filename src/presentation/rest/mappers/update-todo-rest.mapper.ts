@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 
-import { UpdateTodoCommand, UpdateTodoResult } from '@application/todo/index.js';
-import { IRestCommandMapper } from '@core/contracts/index.js';
+import { UpdateTodoCommand, UpdateTodoResult } from '@application/todo';
+import { IRestCommandMapper } from '@core/contracts';
 
-import { UpdateTodoRequest } from '../dtos/requests/index.js';
-import { TodoResponse, UpdateTodoResponse } from '../dtos/responses/index.js';
+import { UpdateTodoRequest } from '../dtos/requests';
+import { TodoResponse, UpdateTodoResponse } from '../dtos/responses';
 
 export interface UpdateTodoRequestWithId {
   id: string;

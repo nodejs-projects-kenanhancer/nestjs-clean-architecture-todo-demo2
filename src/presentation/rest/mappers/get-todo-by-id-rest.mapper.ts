@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 
-import { GetTodoByIdQuery, GetTodoByIdResult } from '@application/todo/index.js';
-import { IRestQueryMapper } from '@core/contracts/index.js';
+import { GetTodoByIdQuery, GetTodoByIdResult } from '@application/todo';
+import { IRestQueryMapper } from '@core/contracts';
 
-import { GetTodoByIdResponse, TodoResponse } from '../dtos/responses/index.js';
+import { GetTodoByIdResponse, TodoResponse } from '../dtos/responses';
 
 export interface GetTodoByIdParams {
   id: string;

@@ -29,3 +29,18 @@ coverage/
 # Temporary files
 tmp/
 temp/
+
+# Claude Code
+.claude/settings.local.json
+
+# Playwright MCP
+.playwright-mcp/
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Generated GraphQL schema
+src/schema.gql
+
+# Excalidraw files
+*.excalidraw

@@ -1,10 +1,12 @@
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 
+import { mock } from 'jest-mock-extended';
 import request from 'supertest';
 import { App } from 'supertest/types';
 
 import { AppModule } from './../src/app.module';
+import { KafkaService } from './../src/infrastructure/messaging/kafka/kafka.service';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
@@ -12,13 +14,20 @@ describe('AppController (e2e)', () => {
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(KafkaService)
+      .useValue(mock<KafkaService>())
+      .compile();
 
     app = moduleFixture.createNestApplication();
     await app.init();
   });
 
-  it('/ (GET)', () => {
-    return request(app.getHttpServer()).get('/').expect(200).expect('Hello World!');
+  afterEach(async () => {
+    await app.close();
+  });
+
+  it('/api/todos (GET)', () => {
+    return request(app.getHttpServer()).get('/api/todos').expect(200);
   });
 });

@@ -18,16 +18,16 @@ import {
   GetTodoByIdUseCase,
   ListTodosUseCase,
   UpdateTodoUseCase,
-} from '@application/todo/index.js';
+} from '@application/todo';
 
-import { CreateTodoRequest, UpdateTodoRequest } from '../dtos/requests/index.js';
+import { CreateTodoRequest, UpdateTodoRequest } from '../dtos/requests';
 import {
   CreateTodoResponse,
   DeleteTodoResponse,
   GetTodoByIdResponse,
   ListTodosResponse,
   UpdateTodoResponse,
-} from '../dtos/responses/index.js';
+} from '../dtos/responses';
 import {
   CreateTodoRestMapper,
   DeleteTodoRestMapper,
@@ -35,7 +35,7 @@ import {
   ListTodosRestMapper,
   REST_MAPPER_TOKENS,
   UpdateTodoRestMapper,
-} from '../mappers/index.js';
+} from '../mappers';
 
 @Controller('api/todos')
 export class TodoController {

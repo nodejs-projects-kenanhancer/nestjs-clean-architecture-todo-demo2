@@ -1,2 +1,2 @@
-export * from './get-todo.args.js';
-export * from './list-todos.args.js';
+export * from './get-todo.args';
+export * from './list-todos.args';

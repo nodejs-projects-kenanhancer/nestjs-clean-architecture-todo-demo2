@@ -4,6 +4,23 @@
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
   "transform": {
-    "^.+\\.(t|j)s$": "ts-jest"
+    "^.+\\.(t|j)s$": [
+      "ts-jest",
+      {
+        "tsconfig": "<rootDir>/../tsconfig.json",
+        "diagnostics": false
+      }
+    ]
+  },
+  "transformIgnorePatterns": [
+    "node_modules/(?!uuid)"
+  ],
+  "moduleNameMapper": {
+    "^@common/(.*)$": "<rootDir>/../src/common/$1",
+    "^@core/(.*)$": "<rootDir>/../src/core/$1",
+    "^@domain/(.*)$": "<rootDir>/../src/domain/$1",
+    "^@application/(.*)$": "<rootDir>/../src/application/$1",
+    "^@infrastructure/(.*)$": "<rootDir>/../src/infrastructure/$1",
+    "^@presentation/(.*)$": "<rootDir>/../src/presentation/$1"
   }
 }
