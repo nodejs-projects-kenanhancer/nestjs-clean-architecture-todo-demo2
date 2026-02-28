@@ -12,6 +12,8 @@ A comprehensive Todo application demonstrating **Clean Architecture** principles
 - [Mapper Pattern](#mapper-pattern)
 - [Error Handling](#error-handling)
 - [Getting Started](#getting-started)
+- [Pipeline Module](#pipeline-module)
+- [Tech Stack](#tech-stack)
 - [API Examples](#api-examples)
 
 ## Architecture Overview
@@ -95,7 +97,7 @@ This project implements **Clean Architecture** (also known as Onion Architecture
 │    │   │  Repository Implementations          External Services    │    │   │
 │    │   │  ┌──────────────────────┐           ┌──────────────────┐ │    │   │
 │    │   │  │ InMemoryTodoRepo     │           │ KafkaService     │ │    │   │
-│    │   │  │ PostgresTodoRepo     │           │ HttpClient       │ │    │   │
+│    │   │  │ (swap to Postgres)   │           │                  │ │    │   │
 │    │   │  └──────────────────────┘           └──────────────────┘ │    │   │
 │    │   └───────────────────────────────────────────────────────────┘    │   │
 │    │                                                                     │   │
@@ -249,7 +251,7 @@ async save(todo: Todo): Promise<Todo> {
 |-----------|----------------|
 | **S** - Single Responsibility | Each class has one reason to change (e.g., `CreateTodoUseCase` only handles creation) |
 | **O** - Open/Closed | New features added via new classes (e.g., new mappers) without modifying existing code |
-| **L** - Liskov Substitution | Repository implementations are interchangeable (`InMemoryTodoRepository` ↔ `PostgresTodoRepository`) |
+| **L** - Liskov Substitution | Repository implementations are interchangeable (e.g., swap `InMemoryTodoRepository` for a database-backed implementation) |
 | **I** - Interface Segregation | Granular mapper interfaces (`IRestCommandMapper`, `IRestQueryMapper`) instead of one large interface |
 | **D** - Dependency Inversion | High-level modules depend on abstractions (e.g., use cases depend on `TodoRepository` interface) |
 
@@ -352,6 +354,15 @@ class GraphQLErrorResponseStrategy implements ErrorResponseStrategy<GraphQLError
 src/
 ├── app.module.ts                    # Root application module
 ├── main.ts                          # Application entry point
+│
+├── common/                          # Shared utilities and modules
+│   └── pipeline/                    # Transport-agnostic middleware pipeline
+│       ├── middleware.interface.ts   # IMiddleware<TInput, TOutput>
+│       ├── pipeline.ts              # Pipeline class with fluent API
+│       ├── pipeline.module.ts       # NestJS module integration
+│       ├── pipeline.decorator.ts    # @UsePipeline, @UseModulePipeline
+│       ├── pipeline.resolver.ts     # Pipeline dependency resolver
+│       └── pipeline.constants.ts    # Metadata constants
 │
 ├── core/                            # Shared kernel (cross-cutting concerns)
 │   ├── contracts/                   # Interface definitions
@@ -560,12 +571,74 @@ TodoNotFoundError  ValidationError    DatabaseError         BadRequestError
                     Error Response Strategy (REST/GraphQL/Kafka)
 ```
 
+## Pipeline Module
+
+A transport-agnostic middleware pipeline system located in `src/common/pipeline/`. It provides composable, type-safe middleware execution for any request/response flow.
+
+### Core Components
+
+- **`Pipeline<TInput, TOutput>`** - Main pipeline class with fluent API
+- **`IMiddleware<TInput, TOutput>`** - Middleware interface with `handle(input, next)` method
+- **Decorators** - `@UsePipeline()`, `@UseModulePipeline()`, `@PipelineModuleDecorator()` for declarative usage
+
+### Execution Model
+
+```
+Input → MW1.before → MW2.before → Handler → MW2.after → MW1.after → Output
+```
+
+### Example
+
+```typescript
+const pipeline = new Pipeline<string, string>();
+
+pipeline.use({
+  async handle(input: string, next: NextFunction<string>) {
+    console.log('before');
+    const result = await next();
+    console.log('after');
+    return result;
+  },
+});
+
+const result = await pipeline.execute('hello', async () => 'world');
+```
+
+### Features
+
+- Type-safe generics for input/output
+- Composable and chainable middlewares
+- Error-aware (middleware can catch and transform errors)
+- Short-circuitable (can return without calling next)
+- Mergeable pipelines via `useAll()`
+- Comprehensive test suite with 45 tests
+
+## Tech Stack
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **Node.js** | 24.14.0 LTS | Runtime |
+| **TypeScript** | 6.0.0-beta | Language |
+| **NestJS** | 11.x | Framework |
+| **Apollo Server** | 5.x | GraphQL |
+| **KafkaJS** | 2.x | Event streaming |
+| **Jest** | 30.x | Testing |
+| **ESLint** | 9.x | Linting |
+| **Prettier** | 3.x | Formatting |
+
+### TypeScript Configuration
+
+- **IDE/Type Checking**: `module: esnext` + `moduleResolution: bundler` (extensionless imports)
+- **Production Build**: `module: commonjs` (via `tsconfig.build.json` override)
+- **Target**: ES2024
+- **Path Aliases**: `@core/*`, `@domain/*`, `@application/*`, `@infrastructure/*`, `@presentation/*`, `@common/*`
+
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 18+
-- npm or yarn
+- Node.js 24+ (LTS)
+- npm 11+
 
 ### Installation
 
