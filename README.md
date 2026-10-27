@@ -616,6 +616,7 @@ const result = await new Pipeline().use(trim).execute(sayHello, ' Kenan ', ' Han
 
 - The target function is passed as is: plain multi-argument functions need no wrapping
 - Arguments and result type-checked against the function (`execute(sayHello, 'Kenan')` does not compile)
+- Decorators type-check middlewares against the decorated method; global and module scopes accept generic middlewares only
 - Composable and chainable middlewares
 - Error-aware (middleware can catch and transform errors) and retry-friendly (`next()` can be called again)
 - Short-circuitable (can return without calling next)
