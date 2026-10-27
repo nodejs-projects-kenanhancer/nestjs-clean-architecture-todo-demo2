@@ -35,6 +35,12 @@ class InjectableMiddleware implements IMiddleware<PlaceOrder> {
   }
 }
 
+class LabeledMiddleware extends StubMiddleware {
+  constructor(readonly label: string) {
+    super();
+  }
+}
+
 describe('Pipeline Decorators', () => {
   describe('UsePipeline (class decorator)', () => {
     it('should store middleware entries as class metadata', () => {
@@ -197,6 +203,64 @@ describe('Pipeline Decorators', () => {
       const entries = Reflect.getMetadata(MODULE_PIPELINE_METADATA, TestModule);
 
       expect(entries).toBeUndefined();
+    });
+  });
+
+  describe('stacked decorators', () => {
+    const a = new LabeledMiddleware('a');
+    const b = new LabeledMiddleware('b');
+
+    it('should accumulate stacked method decorators, top-most first', () => {
+      class TestClass {
+        @UsePipeline(a)
+        @UsePipeline(b)
+        execute(): void {}
+      }
+
+      const entries = Reflect.getMetadata(METHOD_PIPELINE_METADATA, TestClass.prototype, 'execute');
+
+      expect(entries).toEqual([a, b]);
+    });
+
+    it('should accumulate stacked class decorators, top-most first', () => {
+      @UsePipeline(a)
+      @UsePipeline(b)
+      class TestClass {}
+
+      const entries = Reflect.getMetadata(CLASS_PIPELINE_METADATA, TestClass);
+
+      expect(entries).toEqual([a, b]);
+    });
+
+    it('should accumulate stacked module decorators, top-most first', () => {
+      @UseModulePipeline(a)
+      @UseModulePipeline(b)
+      class TestModule {}
+
+      const entries = Reflect.getMetadata(MODULE_PIPELINE_METADATA, TestModule);
+
+      expect(entries).toEqual([a, b]);
+    });
+
+    it('should combine @UseModulePipeline with @PipelineModuleDecorator, top-most first', () => {
+      @UseModulePipeline(a)
+      @PipelineModuleDecorator({ pipeline: [b] })
+      class TestModule {}
+
+      const entries = Reflect.getMetadata(MODULE_PIPELINE_METADATA, TestModule);
+
+      expect(entries).toEqual([a, b]);
+    });
+
+    it('should keep a subclass decorator out of the base class metadata', () => {
+      @UsePipeline(a)
+      class Base {}
+
+      @UsePipeline(b)
+      class Derived extends Base {}
+
+      expect(Reflect.getOwnMetadata(CLASS_PIPELINE_METADATA, Base)).toEqual([a]);
+      expect(Reflect.getOwnMetadata(CLASS_PIPELINE_METADATA, Derived)).toEqual([b]);
     });
   });
 });

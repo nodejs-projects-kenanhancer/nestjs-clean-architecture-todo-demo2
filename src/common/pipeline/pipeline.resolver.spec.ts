@@ -247,4 +247,112 @@ describe('PipelineResolver', () => {
       expect(order).toEqual(['global', 'class-di', 'handler']);
     });
   });
+
+  describe('stacked decorators and inheritance', () => {
+    const mw = (label: string): SimpleMiddleware => new SimpleMiddleware(label);
+
+    const resolveLabels = async (
+      ...scope: Parameters<PipelineResolver['resolve']>
+    ): Promise<string[]> => {
+      const module = await Test.createTestingModule({
+        providers: [PipelineResolver, { provide: GLOBAL_PIPELINE, useValue: [mw('global')] }],
+      }).compile();
+      const middlewares = module
+        .get(PipelineResolver)
+        .resolve(...scope)
+        .getMiddlewares();
+      return middlewares.map(middleware => (middleware as SimpleMiddleware).label);
+    };
+
+    it('should apply stacked method decorators top-most first', async () => {
+      class TestClass {
+        @UsePipeline(mw('A'))
+        @UsePipeline(mw('B'))
+        execute(): void {}
+      }
+
+      expect(await resolveLabels(null, TestClass, 'execute')).toEqual(['global', 'A', 'B']);
+    });
+
+    it('should merge base and derived class scopes, base first', async () => {
+      @UsePipeline(mw('parent'))
+      class Parent {}
+
+      @UsePipeline(mw('child'))
+      class Child extends Parent {}
+
+      expect(await resolveLabels(null, Child)).toEqual(['global', 'parent', 'child']);
+    });
+
+    it('should inherit the base class scope when the subclass has no decorator', async () => {
+      @UsePipeline(mw('parent'))
+      class Parent {}
+
+      class Child extends Parent {}
+
+      expect(await resolveLabels(null, Child)).toEqual(['global', 'parent']);
+    });
+
+    it('should merge the method scopes of an overridden method, base first', async () => {
+      class Parent {
+        @UsePipeline(mw('parent-method'))
+        execute(): void {}
+      }
+
+      class Child extends Parent {
+        @UsePipeline(mw('child-method'))
+        execute(): void {}
+      }
+
+      expect(await resolveLabels(null, Child, 'execute')).toEqual([
+        'global',
+        'parent-method',
+        'child-method',
+      ]);
+    });
+
+    it('should merge base and derived module scopes, base first', async () => {
+      @UseModulePipeline(mw('base-module'))
+      class BaseModule {}
+
+      @UseModulePipeline(mw('derived-module'))
+      class DerivedModule extends BaseModule {}
+
+      expect(await resolveLabels(DerivedModule)).toEqual([
+        'global',
+        'base-module',
+        'derived-module',
+      ]);
+    });
+
+    it('should order all scopes: global, module, class (base → derived), method (base → derived)', async () => {
+      @UseModulePipeline(mw('module-1'))
+      @UseModulePipeline(mw('module-2'))
+      class TestModule {}
+
+      @UsePipeline(mw('parent-class'))
+      class Parent {
+        @UsePipeline(mw('parent-method'))
+        execute(): void {}
+      }
+
+      @UsePipeline(mw('child-class-1'))
+      @UsePipeline(mw('child-class-2'))
+      class Child extends Parent {
+        @UsePipeline(mw('child-method'))
+        execute(): void {}
+      }
+
+      expect(await resolveLabels(TestModule, Child, 'execute')).toEqual([
+        'global',
+        'module-1',
+        'module-2',
+        'parent-class',
+        'child-class-1',
+        'child-class-2',
+        'parent-method',
+        'child-method',
+      ]);
+    });
+  });
 });

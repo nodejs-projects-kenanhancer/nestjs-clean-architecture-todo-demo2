@@ -364,6 +364,7 @@ src/
 │       ├── middleware.interface.ts   # MiddlewareEntry (class type or instance)
 │       ├── pipeline.module.ts       # NestJS module integration
 │       ├── pipeline.decorator.ts    # @UsePipeline, @UseModulePipeline
+│       ├── pipeline.metadata.ts     # Stacked and inherited scope metadata
 │       ├── pipeline.resolver.ts     # Pipeline dependency resolver
 │       └── pipeline.constants.ts    # Metadata constants
 │

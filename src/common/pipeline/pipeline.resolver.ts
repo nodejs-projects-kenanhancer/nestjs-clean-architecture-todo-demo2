@@ -3,12 +3,8 @@ import { ModuleRef } from '@nestjs/core';
 
 import { Fn, IMiddleware, Pipeline } from './core';
 import { MiddlewareEntry, isMiddlewareClass } from './middleware.interface';
-import {
-  CLASS_PIPELINE_METADATA,
-  GLOBAL_PIPELINE,
-  METHOD_PIPELINE_METADATA,
-  MODULE_PIPELINE_METADATA,
-} from './pipeline.constants';
+import { GLOBAL_PIPELINE } from './pipeline.constants';
+import { getClassEntries, getMethodEntries, getModuleEntries } from './pipeline.metadata';
 
 @Injectable()
 export class PipelineResolver {
@@ -32,33 +28,17 @@ export class PipelineResolver {
       entries.push(...this.globalEntries);
     }
 
+    // Each scope is collected along the inheritance chain, base class first.
     if (moduleClass) {
-      const moduleEntries = Reflect.getMetadata(MODULE_PIPELINE_METADATA, moduleClass) as
-        | MiddlewareEntry[]
-        | undefined;
-      if (moduleEntries) {
-        entries.push(...moduleEntries);
-      }
+      entries.push(...getModuleEntries(moduleClass));
     }
 
     if (targetClass) {
-      const classEntries = Reflect.getMetadata(CLASS_PIPELINE_METADATA, targetClass) as
-        | MiddlewareEntry[]
-        | undefined;
-      if (classEntries) {
-        entries.push(...classEntries);
-      }
+      entries.push(...getClassEntries(targetClass));
     }
 
     if (targetClass && methodName) {
-      const methodEntries = Reflect.getMetadata(
-        METHOD_PIPELINE_METADATA,
-        targetClass.prototype,
-        methodName,
-      ) as MiddlewareEntry[] | undefined;
-      if (methodEntries) {
-        entries.push(...methodEntries);
-      }
+      entries.push(...getMethodEntries(targetClass, methodName));
     }
 
     const middlewares: IMiddleware<F>[] = entries.map(entry =>
