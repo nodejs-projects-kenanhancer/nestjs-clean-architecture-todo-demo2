@@ -1,10 +1,9 @@
-import { DynamicModule, Global, Module } from '@nestjs/common';
+import { DynamicModule, Module } from '@nestjs/common';
 
 import { MiddlewareEntry, isMiddlewareClass } from './middleware.interface';
 import { GLOBAL_PIPELINE, PIPELINE_RESOLVER } from './pipeline.constants';
 import { PipelineResolver } from './pipeline.resolver';
 
-@Global()
 @Module({})
 export class PipelineModule {
   static register(...entries: MiddlewareEntry[]): DynamicModule {
@@ -16,8 +15,8 @@ export class PipelineModule {
       providers: [
         ...classProviders,
         { provide: GLOBAL_PIPELINE, useValue: entries },
-        { provide: PIPELINE_RESOLVER, useClass: PipelineResolver },
         PipelineResolver,
+        { provide: PIPELINE_RESOLVER, useExisting: PipelineResolver },
       ],
       exports: [GLOBAL_PIPELINE, PIPELINE_RESOLVER, PipelineResolver, ...classProviders],
     };

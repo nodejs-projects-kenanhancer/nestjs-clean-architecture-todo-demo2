@@ -1,8 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Module } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 
 import { Context, IMiddleware, NextFunction } from './core';
-import { GLOBAL_PIPELINE } from './pipeline.constants';
+import { GLOBAL_PIPELINE, PIPELINE_RESOLVER } from './pipeline.constants';
 import { PipelineModule } from './pipeline.module';
 import { PipelineResolver } from './pipeline.resolver';
 
@@ -173,6 +173,41 @@ describe('PipelineModule', () => {
 
       expect(result).toEqual({ success: true, orderId: 'ORD-001' });
       expect(order).toEqual(['tracked', 'inline', 'handler']);
+    });
+  });
+
+  describe('PIPELINE_RESOLVER token', () => {
+    it('should resolve to the same instance as PipelineResolver', async () => {
+      const module = await Test.createTestingModule({
+        imports: [PipelineModule.register()],
+      }).compile();
+
+      // Identity check as a boolean: printing a diff of two resolvers crashes on Nest internals.
+      const sameInstance = module.get(PIPELINE_RESOLVER) === module.get(PipelineResolver);
+      expect(sameInstance).toBe(true);
+    });
+  });
+
+  describe('global availability', () => {
+    it('should be injectable in modules that do not import PipelineModule', async () => {
+      @Injectable()
+      class Consumer {
+        constructor(
+          readonly resolver: PipelineResolver,
+          @Inject(PIPELINE_RESOLVER) readonly resolverByToken: PipelineResolver,
+        ) {}
+      }
+
+      @Module({ providers: [Consumer] })
+      class FeatureModule {}
+
+      const module = await Test.createTestingModule({
+        imports: [PipelineModule.register(), FeatureModule],
+      }).compile();
+
+      const consumer = module.get(Consumer);
+      expect(consumer.resolver).toBeInstanceOf(PipelineResolver);
+      expect(consumer.resolverByToken).toBeInstanceOf(PipelineResolver);
     });
   });
 });
