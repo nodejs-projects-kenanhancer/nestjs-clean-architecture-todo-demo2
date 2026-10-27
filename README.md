@@ -618,7 +618,7 @@ const result = await pipeline.execute('hello', async () => 'world');
 | Technology | Version | Purpose |
 |------------|---------|---------|
 | **Node.js** | 24.14.0 LTS | Runtime |
-| **TypeScript** | 6.0.0-beta | Language |
+| **TypeScript** | 6.0.3 | Language |
 | **NestJS** | 11.x | Framework |
 | **Apollo Server** | 5.x | GraphQL |
 | **KafkaJS** | 2.x | Event streaming |
@@ -666,9 +666,14 @@ npm run test
 # E2E tests
 npm run test:e2e
 
+# Type check, including type-level tests (@ts-expect-error)
+npm run typecheck
+
 # Test coverage
 npm run test:cov
 ```
+
+Jest runs ts-jest with `diagnostics: false`, so type errors never fail `npm run test`; type-level tests are enforced by `npm run typecheck`.
 
 ## API Examples
 
