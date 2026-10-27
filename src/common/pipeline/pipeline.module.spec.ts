@@ -18,22 +18,23 @@ interface OrderResult {
 
 type PlaceOrder = (command: OrderCommand) => Promise<OrderResult>;
 
+// Global entries must be generic middlewares: they run for every pipelined method.
 @Injectable()
-class LoggingMiddleware implements IMiddleware<PlaceOrder> {
-  handle(_ctx: Context<PlaceOrder>, next: NextFunction<PlaceOrder>): Promise<OrderResult> {
+class LoggingMiddleware implements IMiddleware {
+  handle(_ctx: Context, next: NextFunction): Promise<unknown> {
     return next();
   }
 }
 
 @Injectable()
-class ValidationMiddleware implements IMiddleware<PlaceOrder> {
-  handle(_ctx: Context<PlaceOrder>, next: NextFunction<PlaceOrder>): Promise<OrderResult> {
+class ValidationMiddleware implements IMiddleware {
+  handle(_ctx: Context, next: NextFunction): Promise<unknown> {
     return next();
   }
 }
 
-class SimpleMiddleware implements IMiddleware<PlaceOrder> {
-  handle(_ctx: Context<PlaceOrder>, next: NextFunction<PlaceOrder>): Promise<OrderResult> {
+class SimpleMiddleware implements IMiddleware {
+  handle(_ctx: Context, next: NextFunction): Promise<unknown> {
     return next();
   }
 }
@@ -139,17 +140,14 @@ describe('PipelineModule', () => {
       const order: string[] = [];
 
       @Injectable()
-      class TrackedMiddleware implements IMiddleware<PlaceOrder> {
-        async handle(
-          _ctx: Context<PlaceOrder>,
-          next: NextFunction<PlaceOrder>,
-        ): Promise<OrderResult> {
+      class TrackedMiddleware implements IMiddleware {
+        async handle(_ctx: Context, next: NextFunction): Promise<unknown> {
           order.push('tracked');
           return next();
         }
       }
 
-      const inlineMiddleware: IMiddleware<PlaceOrder> = {
+      const inlineMiddleware: IMiddleware = {
         handle: async (_ctx, next) => {
           order.push('inline');
           return next();

@@ -25,7 +25,7 @@ function ownEntries(
  */
 export function prependEntries(
   metadataKey: symbol,
-  entries: MiddlewareEntry[],
+  entries: readonly MiddlewareEntry[],
   target: object,
   propertyKey?: string | symbol,
 ): void {

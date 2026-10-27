@@ -20,23 +20,24 @@ interface OrderResult {
 
 type PlaceOrder = (command: OrderCommand) => Promise<OrderResult>;
 
+// Generic middlewares, as required at global and module scope and on methods of any signature.
 @Injectable()
-class LoggingMiddleware implements IMiddleware<PlaceOrder> {
-  handle(_ctx: Context<PlaceOrder>, next: NextFunction<PlaceOrder>): Promise<OrderResult> {
+class LoggingMiddleware implements IMiddleware {
+  handle(_ctx: Context, next: NextFunction): Promise<unknown> {
     return next();
   }
 }
 
 @Injectable()
-class ValidationMiddleware implements IMiddleware<PlaceOrder> {
-  handle(_ctx: Context<PlaceOrder>, next: NextFunction<PlaceOrder>): Promise<OrderResult> {
+class ValidationMiddleware implements IMiddleware {
+  handle(_ctx: Context, next: NextFunction): Promise<unknown> {
     return next();
   }
 }
 
-class SimpleMiddleware implements IMiddleware<PlaceOrder> {
+class SimpleMiddleware implements IMiddleware {
   constructor(readonly label: string) {}
-  handle(_ctx: Context<PlaceOrder>, next: NextFunction<PlaceOrder>): Promise<OrderResult> {
+  handle(_ctx: Context, next: NextFunction): Promise<unknown> {
     return next();
   }
 }
@@ -55,7 +56,7 @@ describe('PipelineResolver', () => {
       @UsePipeline(classInstance)
       class TestClass {
         @UsePipeline(methodInstance)
-        execute(): void {}
+        async execute(): Promise<void> {}
       }
 
       const module = await Test.createTestingModule({
@@ -97,7 +98,7 @@ describe('PipelineResolver', () => {
       @UsePipeline(classInstance)
       class TestClass {
         @UsePipeline(methodInstance)
-        execute(): void {}
+        async execute(): Promise<void> {}
       }
 
       const module = await Test.createTestingModule({
@@ -268,7 +269,7 @@ describe('PipelineResolver', () => {
       class TestClass {
         @UsePipeline(mw('A'))
         @UsePipeline(mw('B'))
-        execute(): void {}
+        async execute(): Promise<void> {}
       }
 
       expect(await resolveLabels(null, TestClass, 'execute')).toEqual(['global', 'A', 'B']);
@@ -296,12 +297,12 @@ describe('PipelineResolver', () => {
     it('should merge the method scopes of an overridden method, base first', async () => {
       class Parent {
         @UsePipeline(mw('parent-method'))
-        execute(): void {}
+        async execute(): Promise<void> {}
       }
 
       class Child extends Parent {
         @UsePipeline(mw('child-method'))
-        execute(): void {}
+        async execute(): Promise<void> {}
       }
 
       expect(await resolveLabels(null, Child, 'execute')).toEqual([
@@ -333,14 +334,14 @@ describe('PipelineResolver', () => {
       @UsePipeline(mw('parent-class'))
       class Parent {
         @UsePipeline(mw('parent-method'))
-        execute(): void {}
+        async execute(): Promise<void> {}
       }
 
       @UsePipeline(mw('child-class-1'))
       @UsePipeline(mw('child-class-2'))
       class Child extends Parent {
         @UsePipeline(mw('child-method'))
-        execute(): void {}
+        async execute(): Promise<void> {}
       }
 
       expect(await resolveLabels(TestModule, Child, 'execute')).toEqual([

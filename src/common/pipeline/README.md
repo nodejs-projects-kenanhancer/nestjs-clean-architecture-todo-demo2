@@ -231,6 +231,28 @@ class DerivedUseCase extends BaseUseCase {
 
 A middleware declared on several levels runs once per declaration.
 
+### Type Checking
+
+The decorators check their entries at compile time (`npm run typecheck`):
+
+- **Method**: the method must be `async` — a wrapped method returns a `Promise` — and every entry must accept it. Generic middlewares (`IMiddleware`) always do; typed ones (`IMiddleware<CreateTodoUseCase['execute']>`) only on a method with a matching signature. Mixing in a generic middleware does not make an incompatible one acceptable.
+- **Class**: the same check for every public async method of the class; sync methods are not checked.
+- **Global and module** (`PipelineModule.register`, `@UseModulePipeline`, `@PipelineModuleDecorator`): generic middlewares only, because they run for every pipelined method.
+
+```typescript
+class CreateTodoUseCase {
+  @UsePipeline(LoggingMiddleware, TrimTitleMiddleware) // generic + written for this signature
+  async execute(command: CreateTodoCommand): Promise<CreateTodoResult> { /* ... */ }
+}
+
+class PlaceOrderUseCase {
+  @UsePipeline(TrimTitleMiddleware) // TS1241 … Property 'title' is missing in type 'PlaceOrderCommand' …
+  async execute(command: PlaceOrderCommand): Promise<PlaceOrderResult> { /* ... */ }
+}
+```
+
+A class-level mismatch names the method (`__pipelineIncompatibleMethods: "execute"`); a global or module one names the index of the entry (`__pipelineNonGenericEntryAt: "1"`).
+
 ## DI-Aware Middlewares
 
 ### @Injectable() Middleware (with DI dependencies)
@@ -388,15 +410,15 @@ Do not import `@common/pipeline` in the browser: that barrel also exports the Ne
 
 | Method | Description |
 |--------|-------------|
-| `register(...entries)` | Returns a global DynamicModule with the given middleware entries |
+| `register(...entries)` | Returns a global DynamicModule with the given middleware entries (generic middlewares only) |
 
 ### Decorators
 
 | Decorator | Target | Description |
 |-----------|--------|-------------|
-| `@UsePipeline(...entries)` | Class or Method | Attach middleware at class or method scope |
-| `@UseModulePipeline(...entries)` | Class (Module) | Attach middleware at module scope |
-| `@PipelineModuleDecorator(metadata)` | Class (Module) | Combined `@Module()` + pipeline metadata |
+| `@UsePipeline(...entries)` | Class or async Method | Attach middleware at class or method scope, type-checked against the method(s) |
+| `@UseModulePipeline(...entries)` | Class (Module) | Attach middleware at module scope (generic middlewares only) |
+| `@PipelineModuleDecorator(metadata)` | Class (Module) | Combined `@Module()` + pipeline metadata (generic middlewares only) |
 
 ### Constants (Symbol Tokens)
 
@@ -426,9 +448,10 @@ npm run typecheck   # type-level tests (*.types.spec.ts) and the browser-like co
 | `core/core-isolation.spec.ts` | 4 | `core/` imports nothing outside `core/` and does not use reflect-metadata |
 | `core/api-client.example.spec.ts` | 2 | Front-end API client chain (auth, correlation id, retry, error mapping, log) |
 | `pipeline.decorator.spec.ts` | 17 | @UsePipeline class/method, @UseModulePipeline, @PipelineModuleDecorator, stacked decorators |
+| `pipeline.decorator.types.spec.ts` | 4 | Compile-time checks, enforced by `npm run typecheck`: method and class level, async only, generic-only global and module scopes |
 | `pipeline.resolver.spec.ts` | 15 | All 4 scopes, partial scopes, DI resolution, mixed entries, stacking and inheritance order |
 | `pipeline.module.spec.ts` | 10 | register() with class types/instances/mixed, DI integration, `PIPELINE_RESOLVER` alias, global availability |
-| **Total** | **76** | |
+| **Total** | **80** | |
 
 ## Design Decisions
 

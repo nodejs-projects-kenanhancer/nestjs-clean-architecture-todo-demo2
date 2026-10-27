@@ -10,27 +10,16 @@ import {
 } from './pipeline.constants';
 import { PipelineModuleDecorator, UseModulePipeline, UsePipeline } from './pipeline.decorator';
 
-interface OrderCommand {
-  orderId: string;
-  quantity: number;
-}
-
-interface OrderResult {
-  success: boolean;
-  orderId: string;
-}
-
-type PlaceOrder = (command: OrderCommand) => Promise<OrderResult>;
-
-class StubMiddleware implements IMiddleware<PlaceOrder> {
-  handle(_ctx: Context<PlaceOrder>, next: NextFunction<PlaceOrder>): Promise<OrderResult> {
+// Generic middlewares: decorators accept typed ones only on methods with the matching signature.
+class StubMiddleware implements IMiddleware {
+  handle(_ctx: Context, next: NextFunction): Promise<unknown> {
     return next();
   }
 }
 
 @Injectable()
-class InjectableMiddleware implements IMiddleware<PlaceOrder> {
-  handle(_ctx: Context<PlaceOrder>, next: NextFunction<PlaceOrder>): Promise<OrderResult> {
+class InjectableMiddleware implements IMiddleware {
+  handle(_ctx: Context, next: NextFunction): Promise<unknown> {
     return next();
   }
 }
@@ -81,7 +70,7 @@ describe('Pipeline Decorators', () => {
 
       class TestClass {
         @UsePipeline(instance)
-        execute(): void {}
+        async execute(): Promise<void> {}
       }
 
       const entries = Reflect.getMetadata(METHOD_PIPELINE_METADATA, TestClass.prototype, 'execute');
@@ -92,7 +81,7 @@ describe('Pipeline Decorators', () => {
     it('should store class types as method entries', () => {
       class TestClass {
         @UsePipeline(InjectableMiddleware)
-        execute(): void {}
+        async execute(): Promise<void> {}
       }
 
       const entries = Reflect.getMetadata(METHOD_PIPELINE_METADATA, TestClass.prototype, 'execute');
@@ -106,10 +95,10 @@ describe('Pipeline Decorators', () => {
 
       class TestClass {
         @UsePipeline(instance1)
-        method1(): void {}
+        async method1(): Promise<void> {}
 
         @UsePipeline(instance2)
-        method2(): void {}
+        async method2(): Promise<void> {}
       }
 
       const entries1 = Reflect.getMetadata(
@@ -136,7 +125,7 @@ describe('Pipeline Decorators', () => {
       @UsePipeline(classInstance)
       class TestClass {
         @UsePipeline(methodInstance)
-        execute(): void {}
+        async execute(): Promise<void> {}
       }
 
       const classEntries = Reflect.getMetadata(CLASS_PIPELINE_METADATA, TestClass);
@@ -214,7 +203,7 @@ describe('Pipeline Decorators', () => {
       class TestClass {
         @UsePipeline(a)
         @UsePipeline(b)
-        execute(): void {}
+        async execute(): Promise<void> {}
       }
 
       const entries = Reflect.getMetadata(METHOD_PIPELINE_METADATA, TestClass.prototype, 'execute');
