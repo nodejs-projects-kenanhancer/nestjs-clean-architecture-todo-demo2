@@ -58,6 +58,21 @@ export function getClassEntries(targetClass: Function): MiddlewareEntry[] {
   return baseFirstChain(targetClass).flatMap(cls => ownEntries(CLASS_PIPELINE_METADATA, cls));
 }
 
+/** Marked by a class-level @UsePipeline, on the class or a base class. */
+// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+export function isClassMarked(targetClass: Function): boolean {
+  return Reflect.getMetadata(CLASS_PIPELINE_METADATA, targetClass) !== undefined;
+}
+
+/** Marked by a method-level @UsePipeline (also an empty one), here or on a base class method. */
+// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+export function isMethodMarked(targetClass: Function, methodName: string | symbol): boolean {
+  return (
+    Reflect.getMetadata(METHOD_PIPELINE_METADATA, targetClass.prototype as object, methodName) !==
+    undefined
+  );
+}
+
 export function getMethodEntries(
   // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   targetClass: Function,

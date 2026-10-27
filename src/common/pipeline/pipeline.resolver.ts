@@ -22,6 +22,26 @@ export class PipelineResolver {
     targetClass?: Function | null,
     methodName?: string | null,
   ): Pipeline<F> {
+    const middlewares: IMiddleware<F>[] = this.entries(moduleClass, targetClass, methodName).map(
+      entry =>
+        isMiddlewareClass(entry)
+          ? this.moduleRef.get(entry, { strict: false })
+          : (entry as IMiddleware<F>),
+    );
+
+    const pipeline = new Pipeline<F>();
+    pipeline.use(...middlewares);
+    return pipeline;
+  }
+
+  /** The entries of all scopes in execution order, with class types not yet resolved. */
+  entries(
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+    moduleClass?: Function | null,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+    targetClass?: Function | null,
+    methodName?: string | null,
+  ): MiddlewareEntry[] {
     const entries: MiddlewareEntry[] = [];
 
     if (this.globalEntries) {
@@ -41,14 +61,6 @@ export class PipelineResolver {
       entries.push(...getMethodEntries(targetClass, methodName));
     }
 
-    const middlewares: IMiddleware<F>[] = entries.map(entry =>
-      isMiddlewareClass(entry)
-        ? this.moduleRef.get(entry, { strict: false })
-        : (entry as IMiddleware<F>),
-    );
-
-    const pipeline = new Pipeline<F>();
-    pipeline.use(...middlewares);
-    return pipeline;
+    return entries;
   }
 }

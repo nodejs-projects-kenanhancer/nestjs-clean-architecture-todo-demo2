@@ -1,7 +1,9 @@
 import { DynamicModule, Module } from '@nestjs/common';
+import { DiscoveryModule } from '@nestjs/core';
 
 import { GenericOnly, MiddlewareEntry, isMiddlewareClass } from './middleware.interface';
 import { GLOBAL_PIPELINE, PIPELINE_RESOLVER } from './pipeline.constants';
+import { PipelineExplorer } from './pipeline.explorer';
 import { PipelineResolver } from './pipeline.resolver';
 
 @Module({})
@@ -14,11 +16,13 @@ export class PipelineModule {
     return {
       module: PipelineModule,
       global: true,
+      imports: [DiscoveryModule],
       providers: [
         ...classProviders,
         { provide: GLOBAL_PIPELINE, useValue: entries },
         PipelineResolver,
         { provide: PIPELINE_RESOLVER, useExisting: PipelineResolver },
+        PipelineExplorer,
       ],
       exports: [GLOBAL_PIPELINE, PIPELINE_RESOLVER, PipelineResolver, ...classProviders],
     };

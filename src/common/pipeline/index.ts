@@ -5,6 +5,7 @@ export { isMiddlewareClass } from './middleware.interface';
 export { UsePipeline, UseModulePipeline, PipelineModuleDecorator } from './pipeline.decorator';
 export type { PipelineModuleMetadata } from './pipeline.decorator';
 export { PipelineResolver } from './pipeline.resolver';
+export { PipelineConfigurationError } from './pipeline.errors';
 export { PipelineModule } from './pipeline.module';
 export {
   GLOBAL_PIPELINE,

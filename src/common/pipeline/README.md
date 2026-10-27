@@ -27,6 +27,8 @@ src/common/pipeline/
   pipeline.decorator.ts      # @UsePipeline, @UseModulePipeline, @PipelineModuleDecorator
   pipeline.metadata.ts       # Stores entries (stacking) and reads them along the inheritance chain
   pipeline.resolver.ts       # Scope merging + DI resolution via ModuleRef
+  pipeline.explorer.ts       # Wraps marked provider methods at startup (DiscoveryService)
+  pipeline.errors.ts         # PipelineConfigurationError (startup errors)
   pipeline.module.ts         # PipelineModule.register() NestJS DynamicModule
   index.ts                   # Barrel exports (core + NestJS layer)
 ```
@@ -128,15 +130,15 @@ type MiddlewareEntry<F extends Fn = Fn> = Type<IMiddleware<F>> | IMiddleware<F>;
 
 ## Scope Levels
 
-Middlewares can be registered at 4 scope levels. When a pipeline is resolved, scopes merge in order:
+Middlewares can be registered at 4 scope levels. For each marked method (see [Automatic Wrapping](#automatic-wrapping)), scopes merge in order:
 
 ```
-Global → Module → Class → Method → Target handler
+Global → Module → Class → Method → Target method
 ```
 
 ### 1. Global Scope
 
-Register in `AppModule` imports. These run for every resolved pipeline in the app.
+Register in `AppModule` imports. These run for every marked method in the app.
 
 ```typescript
 import { PipelineModule } from '@common/pipeline/index.js';
@@ -152,7 +154,7 @@ export class AppModule {}
 
 ### 2. Module Scope
 
-Attach to a NestJS module class. These run for pipelines resolved within that module's context.
+Attach to a NestJS module class. These run for the marked methods of the providers declared in that module.
 
 ```typescript
 import { UseModulePipeline } from '@common/pipeline/index.js';
@@ -178,7 +180,7 @@ export class TodoModule {}
 
 ### 3. Class Scope
 
-Attach to a use case or service class. These run whenever this class's pipeline is resolved.
+Attach to a use case or service class. These run for the marked methods of the class and its subclasses; a class-level decorator does not mark methods by itself.
 
 ```typescript
 import { UsePipeline } from '@common/pipeline/index.js';
@@ -186,13 +188,16 @@ import { UsePipeline } from '@common/pipeline/index.js';
 @UsePipeline(ValidationMiddleware)
 @Injectable()
 export class CreateTodoUseCase {
-  // ...
+  @UsePipeline() // marks the method; ValidationMiddleware applies to it
+  async execute(command: CreateTodoCommand): Promise<CreateTodoResult> {
+    // ...
+  }
 }
 ```
 
 ### 4. Method Scope
 
-Attach to a specific method. These run only when that method's pipeline is resolved.
+Attach to a specific method. This marks the method for wrapping and adds middlewares that run only for it; `@UsePipeline()` without entries only marks it.
 
 ```typescript
 @Injectable()
@@ -281,7 +286,7 @@ export class TransactionMiddleware<F extends Fn = Fn> implements IMiddleware<F> 
 
 In a generic middleware class, declare the return type as `Promise<Result<F>>`: the type TypeScript infers for `async handle` does not match `IMiddleware<F>` (TS2416).
 
-Pass the **class type** — `PipelineResolver` resolves it from the DI container via `ModuleRef`:
+Pass the **class type** — it is resolved from the DI container via `ModuleRef` when the application starts. A transient middleware gets one instance per wrapped method; request-scoped middlewares are not supported:
 
 ```typescript
 @UsePipeline(TransactionMiddleware) // class type, resolved by DI
@@ -320,30 +325,52 @@ Pass an **instance** — used directly, no DI resolution:
 @UsePipeline(TransactionMiddleware, new RetryMiddleware(3))
 ```
 
-## PipelineResolver
+## Automatic Wrapping
 
-The `PipelineResolver` is the key integration point. It collects middleware entries from all applicable scopes, resolves class types from the DI container, and returns a ready-to-execute `Pipeline`.
+`PipelineModule.register()` adds `PipelineExplorer`. When the application starts (`onModuleInit`), it finds the provider methods marked with a method-level `@UsePipeline(...)` and wraps them. Calling such a method — from a controller, a GraphQL resolver, a Kafka handler, a worker, an MCP tool or a test — runs the pipeline. The use case contains no `resolve(...)` call and no method name string:
 
 ```typescript
 @Injectable()
-export class CreateTodoUseCase implements UseCase<CreateTodoCommand, CreateTodoResult> {
-  constructor(private readonly pipelineResolver: PipelineResolver) {}
-
+export class CreateTodoUseCase {
+  @UsePipeline() // marks the method; global, module and class middlewares apply
   async execute(command: CreateTodoCommand): Promise<CreateTodoResult> {
-    const pipeline = this.pipelineResolver
-      .resolve<CreateTodoUseCase['execute']>(
-        TodoModule,           // module scope
-        CreateTodoUseCase,    // class scope
-        'execute',            // method scope
-      )
-      .withTarget('CreateTodoUseCase.execute');
-
-    return pipeline.execute(async (cmd: CreateTodoCommand) => {
-      // actual business logic here
-      return result;
-    }, command);
+    // business logic only
   }
 }
+```
+
+- **What is wrapped**: only methods marked at method level, also through inheritance. The module scope is the provider's host module. Global, module and class scopes add middlewares to marked methods; they never wrap anything on their own.
+- **Inside the wrapper**: `ctx.target` is `ClassName.methodName`; the original method gets `this` and the arguments as changed by the middlewares; its errors are rethrown unchanged, so exception filters keep working.
+- **Built once**: each method's pipeline is built at startup; a call only creates its context.
+- **Startup errors** (`PipelineConfigurationError`):
+  - a class middleware that is not registered as a provider — the message names the middleware, the method and where to register it;
+  - a request-scoped middleware, or a marked provider that is request-scoped or transient;
+  - `@UsePipeline` on a controller, or on a transport handler method of a provider (`@Query`, `@MessagePattern`, ...). Nest calls those handlers itself, so the wrapper would be bypassed: mark the use case method they call instead;
+  - a class-level `@UsePipeline` on a class without any marked method.
+- **Only instances created by Nest are wrapped, after `init()`**:
+  - in tests, call `await moduleRef.init()` (or `app.init()`); `compile()` alone does not run `onModuleInit`;
+  - `new CreateTodoUseCase(...)` is not wrapped, which keeps plain unit tests of the business logic free of middlewares. To run such an instance, or any function outside DI, through middlewares, use the core directly:
+
+```typescript
+const execute = (command: CreateTodoCommand): Promise<CreateTodoResult> =>
+  useCase.execute(command);
+
+await new Pipeline()
+  .use(logging, validation)
+  .withTarget('CreateTodoUseCase.execute')
+  .execute(execute, command);
+```
+
+## PipelineResolver (Manual Use)
+
+The explorer collects the entries through `PipelineResolver`. Use `resolve(moduleClass?, targetClass?, methodName?)` directly only when a function outside DI should run with the configured scopes. It resolves class middlewares on every call and does not support transient ones.
+
+```typescript
+const pipeline = pipelineResolver
+  .resolve<CreateTodoUseCase['execute']>(TodoModule, CreateTodoUseCase, 'execute')
+  .withTarget('CreateTodoUseCase.execute');
+
+await pipeline.execute(execute, command);
 ```
 
 ## Execution Order
@@ -405,6 +432,11 @@ Do not import `@common/pipeline` in the browser: that barrel also exports the Ne
 | Method | Description |
 |--------|-------------|
 | `resolve<F>(moduleClass?, targetClass?, methodName?)` | Collect entries from all scopes, resolve DI, return `Pipeline<F>` |
+| `entries(moduleClass?, targetClass?, methodName?)` | The entries of all scopes in execution order, class types not resolved |
+
+### `PipelineConfigurationError`
+
+Thrown during `init()` for a set-up that cannot work; see [Automatic Wrapping](#automatic-wrapping).
 
 ### `PipelineModule`
 
@@ -451,7 +483,8 @@ npm run typecheck   # type-level tests (*.types.spec.ts) and the browser-like co
 | `pipeline.decorator.types.spec.ts` | 4 | Compile-time checks, enforced by `npm run typecheck`: method and class level, async only, generic-only global and module scopes |
 | `pipeline.resolver.spec.ts` | 15 | All 4 scopes, partial scopes, DI resolution, mixed entries, stacking and inheritance order |
 | `pipeline.module.spec.ts` | 10 | register() with class types/instances/mixed, DI integration, `PIPELINE_RESOLVER` alias, global availability |
-| **Total** | **80** | |
+| `pipeline.explorer.spec.ts` | 14 | Automatic wrapping (scopes, `this`, arguments, errors, built once, aliases, `new` and `compile()` limits) and startup errors |
+| **Total** | **94** | |
 
 ## Design Decisions
 
@@ -468,3 +501,7 @@ npm run typecheck   # type-level tests (*.types.spec.ts) and the browser-like co
 6. **The target is not wrapped**: `execute(fn, ...args)` runs any function as is — a plain `sayHello(firstName, lastName)` needs no adapter, decorator or single-input object.
 
 7. **One shared context, argumentless `next()`**: Middlewares pass changes to the next middleware and the target through `ctx`, so writing a middleware never means forwarding arguments.
+
+8. **Wrapping at startup, not in the decorator**: Decorators only store metadata; `PipelineExplorer` wraps at startup. The module scope comes from the provider's host module, DI resolution and validation happen once, and no global container reference is needed, so several Nest applications or testing modules in one process stay isolated. The instance is patched, not the prototype, so instances created with `new` and Nest's own method metadata stay untouched.
+
+9. **Explicit marking**: Only methods marked at method level are wrapped. Wrapping every method of a class-level-marked class (as decorators in other languages do) would also wrap TypeScript `private` helpers, which are ordinary prototype methods at runtime: sync helpers would start returning Promises and internal `this.helper()` calls would run the pipeline again.
