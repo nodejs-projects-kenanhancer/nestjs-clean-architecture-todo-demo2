@@ -366,6 +366,8 @@ src/
 │       ├── pipeline.decorator.ts    # @UsePipeline, @UseModulePipeline
 │       ├── pipeline.metadata.ts     # Stacked and inherited scope metadata
 │       ├── pipeline.resolver.ts     # Pipeline dependency resolver
+│       ├── pipeline.explorer.ts     # Wraps marked provider methods at startup
+│       ├── pipeline.errors.ts       # PipelineConfigurationError
 │       └── pipeline.constants.ts    # Metadata constants
 │
 ├── core/                            # Shared kernel (cross-cutting concerns)
@@ -585,6 +587,7 @@ A transport-agnostic middleware pipeline system located in `src/common/pipeline/
 - **`IMiddleware<F>`** - Middleware interface with `handle(ctx, next)`; `next()` takes no arguments
 - **`Context<F>`** - One object per execution shared by all middlewares and the target: `args`, `target`, `metadata`
 - **Decorators** - `@UsePipeline()`, `@UseModulePipeline()`, `@PipelineModuleDecorator()` for declarative usage
+- **Automatic wrapping** - At startup, provider methods marked with `@UsePipeline()` are wrapped, so every caller (REST, GraphQL, Kafka, workers, tests) runs the same middlewares; invalid set-ups stop the start with a `PipelineConfigurationError`
 
 `core/` has no NestJS or reflect-metadata imports, so the same pipeline also runs in the browser.
 
