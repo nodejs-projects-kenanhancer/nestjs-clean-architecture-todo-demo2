@@ -610,7 +610,8 @@ function sayHello(firstName: string, lastName: string): string {
 
 const trim: IMiddleware<typeof sayHello> = {
   async handle(ctx, next) {
-    ctx.args = [ctx.args[0].trim(), ctx.args[1].trim()];
+    const [firstName, lastName] = ctx.args;
+    ctx.args = [firstName.trim(), lastName.trim()];
     return next();
   },
 };

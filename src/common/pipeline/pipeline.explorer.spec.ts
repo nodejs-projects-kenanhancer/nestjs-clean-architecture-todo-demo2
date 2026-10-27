@@ -80,7 +80,8 @@ describe('PipelineExplorer', () => {
     it('should keep `this` and call the method with the arguments changed by middlewares', async () => {
       const trim: IMiddleware<(title: string) => Promise<string>> = {
         handle: async (ctx, next) => {
-          ctx.args = [ctx.args[0].trim()];
+          const [title] = ctx.args;
+          ctx.args = [title.trim()];
           return next();
         },
       };

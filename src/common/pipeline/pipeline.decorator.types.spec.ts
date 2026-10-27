@@ -61,7 +61,8 @@ class TrimTitleMiddleware implements IMiddleware<CreateTodo> {
 
 class OrderOnlyMiddleware implements IMiddleware<PlaceOrder> {
   handle(ctx: Context<PlaceOrder>, next: NextFunction<PlaceOrder>): Promise<unknown> {
-    void ctx.args[0].orderId;
+    const [order] = ctx.args;
+    void order.orderId;
     return next();
   }
 }

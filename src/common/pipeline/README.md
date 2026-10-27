@@ -61,6 +61,8 @@ interface IMiddleware<F extends Fn = Fn> {
 
 `F` is the function the middleware is written for, and `Result<F>` is `Awaited<ReturnType<F>>`. A plain `IMiddleware` (default `Fn`) is generic and fits any target; `IMiddleware<typeof sayHello>` or `IMiddleware<CreateTodoUseCase['execute']>` types `ctx.args` and the result.
 
+Read the arguments by destructuring — `const [firstName, lastName] = ctx.args;` — the names are chosen where they are used and the types come from the tuple. Named access such as `ctx.firstName` is not possible: TypeScript keeps parameter names and tuple labels for display only and gives type-level code no access to them ([#41681](https://github.com/microsoft/TypeScript/issues/41681)), and minifiers rename parameters at runtime. When names matter, give the function a single object parameter, as use case commands do.
+
 ### Pipeline
 
 A pure class that composes middlewares using `reduceRight` — first-added middleware is the outermost wrapper. `execute(fn, ...args)` is the single entry point: the target is passed as is, with its own arguments, and is never wrapped or modified.
@@ -81,7 +83,8 @@ const log: IMiddleware = {
 
 const trim: IMiddleware<typeof sayHello> = {
   async handle(ctx, next) {
-    ctx.args = [ctx.args[0].trim(), ctx.args[1].trim()];
+    const [firstName, lastName] = ctx.args;
+    ctx.args = [firstName.trim(), lastName.trim()];
     return next();
   },
 };

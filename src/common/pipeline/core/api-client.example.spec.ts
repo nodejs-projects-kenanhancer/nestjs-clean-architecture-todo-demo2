@@ -84,7 +84,8 @@ const mapErrors: IMiddleware<FetchJson> = {
 
 const log = (lines: string[]): IMiddleware<FetchJson> => ({
   handle: async (ctx, next): Promise<unknown> => {
-    const prefix = `${ctx.target} ${ctx.args[0]} [${String(ctx.metadata.get('correlationId'))}]`;
+    const [url] = ctx.args;
+    const prefix = `${ctx.target} ${url} [${String(ctx.metadata.get('correlationId'))}]`;
     try {
       const result = await next();
       lines.push(`${prefix} ok`);
