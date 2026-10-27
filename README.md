@@ -353,6 +353,7 @@ class GraphQLErrorResponseStrategy implements ErrorResponseStrategy<GraphQLError
 ```
 src/
 ├── app.module.ts                    # Root application module
+├── app.setup.ts                     # Global pipes and CORS, shared by main.ts and e2e tests
 ├── main.ts                          # Application entry point
 │
 ├── common/                          # Shared utilities and modules
@@ -593,7 +594,7 @@ A transport-agnostic middleware pipeline system located in `src/common/pipeline/
 
 `core/` has no NestJS or reflect-metadata imports, so the same pipeline also runs in the browser.
 
-In this repository, `AppModule` registers `LoggingMiddleware` globally (`PipelineModule.register(LoggingMiddleware)`) and `CreateTodoUseCase.execute` is marked with `@UsePipeline()`. A REST request and a direct call of the use case both run through it, and the exception filters still produce the same HTTP response (see `test/app.e2e-spec.ts`).
+In this repository, `AppModule` registers `LoggingMiddleware` globally (`PipelineModule.register(LoggingMiddleware)`) and `CreateTodoUseCase.execute` is marked with `@UsePipeline()`. A REST request and a direct call of the use case both run through it, and the exception filters still produce the same HTTP response (see `test/app.e2e-spec.ts`). The e2e tests apply the same global set-up as `main.ts` through `configureApp` (`src/app.setup.ts`), so `ValidationPipe` runs there as in production.
 
 ### Execution Model
 

@@ -219,7 +219,13 @@ export class CreateTodoUseCase implements UseCase<CreateTodoCommand, CreateTodoR
 }
 ```
 
-`LoggingMiddleware` (`src/infrastructure/pipeline/`) logs `→ CreateTodoUseCase.execute` and `← CreateTodoUseCase.execute (n ms)`, or the failure, and rethrows errors unchanged. `test/app.e2e-spec.ts` checks that `POST /api/todos` and a direct `CreateTodoUseCase.execute(...)` call run it, and that an invalid request still gets the exception filter's 400 response.
+`LoggingMiddleware` (`src/infrastructure/pipeline/`) logs `→ CreateTodoUseCase.execute` and `← CreateTodoUseCase.execute (n ms)`, or the failure, and rethrows errors unchanged. `test/app.e2e-spec.ts` uses the same global set-up as `main.ts` (`configureApp` in `src/app.setup.ts`) and checks that:
+
+- `POST /api/todos` and a direct `CreateTodoUseCase.execute(...)` call run it;
+- an empty title or an unknown property is rejected by `ValidationPipe` before the use case runs;
+- a whitespace-only title passes `ValidationPipe`, reaches the use case and gets the domain's 400 response through the exception filter.
+
+`ValidationPipe` only runs for handlers Nest invokes (REST, GraphQL); direct calls — workers, scripts, tests, the hand-written Kafka consumer — rely on the domain's own validation.
 
 ## Scope Levels
 
