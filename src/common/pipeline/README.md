@@ -1,17 +1,47 @@
 # Pipeline Middleware Library
 
-A generic **Chain of Responsibility** pipeline library for NestJS applications. It provides transport-agnostic cross-cutting concerns (logging, validation, transactions, retries, etc.) that work regardless of entry point — REST, GraphQL, Kafka, CLI, or direct method calls.
+A generic **Chain of Responsibility** pipeline for cross-cutting concerns (logging, validation, transactions, retries, etc.). Its core is framework-free and also runs in the browser; a NestJS layer applies it to use cases automatically, whatever the entry point — REST, GraphQL, Kafka, CLI, workers or direct method calls.
 
 ## Why?
 
-NestJS built-in mechanisms (Guards, Pipes, Interceptors, Filters, Middleware) only fire when a request enters through a transport layer (HTTP, GraphQL, microservices). They **don't fire** when:
+NestJS guards, pipes, interceptors and exception filters run only around handlers that Nest itself invokes for a transport — HTTP routes, GraphQL resolvers and microservice message handlers — and Nest middleware only for HTTP requests. They **don't run** when:
 
-- A use case is called directly in tests
-- A CLI command invokes application logic
-- A Kafka consumer processes a message (no HTTP context)
-- One use case calls another internally
+- a use case is called directly — from a worker, a CLI command, an MCP tool or a test;
+- a message is read by a hand-written consumer instead of a Nest microservice handler (this repository reads Kafka with `consumer.run({ eachMessage })` in `src/presentation/kafka/handlers/todo-event.handler.ts`);
+- one use case calls another internally.
 
-This library solves that by attaching middleware pipelines at the **application layer**, not the transport layer.
+This library attaches pipelines at the **application layer** instead: a marked use case method runs its middlewares whoever calls it, as long as the instance comes from the Nest container (see [Automatic Wrapping](#automatic-wrapping)).
+
+## Quick Start
+
+**1. Register global middlewares** in the root module:
+
+```typescript
+import { PipelineModule } from '@common/pipeline';
+
+@Module({
+  imports: [PipelineModule.register(LoggingMiddleware) /* , other modules */],
+})
+export class AppModule {}
+```
+
+**2. Mark the use case method:**
+
+```typescript
+import { UsePipeline } from '@common/pipeline';
+
+@Injectable()
+export class CreateTodoUseCase {
+  @UsePipeline()
+  async execute(command: CreateTodoCommand): Promise<CreateTodoResult> {
+    // business logic only
+  }
+}
+```
+
+**3. Call it as usual.** Every caller — a controller, a GraphQL resolver, a Kafka handler, a worker or a test — now runs `LoggingMiddleware` around `execute`.
+
+Outside NestJS, for example in the browser, use the core directly: see [Pipeline](#pipeline) and [Using the Core Without NestJS](#using-the-core-without-nestjs-front-end).
 
 ## Architecture
 
@@ -131,6 +161,66 @@ Middlewares can be either:
 type MiddlewareEntry<F extends Fn = Fn> = Type<IMiddleware<F>> | IMiddleware<F>;
 ```
 
+## Automatic Wrapping
+
+`PipelineModule.register()` adds `PipelineExplorer`. When the application starts (`onModuleInit`), it finds the provider methods marked with a method-level `@UsePipeline(...)` and wraps them. Calling such a method — from a controller, a GraphQL resolver, a Kafka handler, a worker, an MCP tool or a test — runs the pipeline. The use case contains no `resolve(...)` call and no method name string:
+
+```typescript
+@Injectable()
+export class CreateTodoUseCase {
+  @UsePipeline() // marks the method; global, module and class middlewares apply
+  async execute(command: CreateTodoCommand): Promise<CreateTodoResult> {
+    // business logic only
+  }
+}
+```
+
+- **What is wrapped**: only methods marked at method level, also through inheritance. The module scope is the provider's host module. Global, module and class scopes add middlewares to marked methods; they never wrap anything on their own.
+- **Inside the wrapper**: `ctx.target` is `ClassName.methodName`; the original method gets `this` and the arguments as changed by the middlewares; its errors are rethrown unchanged, so exception filters keep working.
+- **Built once**: each method's pipeline is built at startup; a call only creates its context.
+- **Startup errors** (`PipelineConfigurationError`):
+  - a class middleware that is not registered as a provider — the message names the middleware, the method and where to register it;
+  - a request-scoped middleware, or a marked provider that is request-scoped or transient;
+  - `@UsePipeline` on a controller — route and message handlers (`@Get`, `@MessagePattern`, ...) live there — or on a transport handler method of a provider, such as a GraphQL resolver's `@Query`, `@Mutation` or `@ResolveField`. Nest calls those handlers itself, so the wrapper would be bypassed: mark the use case method they call instead;
+  - a class-level `@UsePipeline` on a class without any marked method.
+- **Only instances created by Nest are wrapped, after `init()`**:
+  - in tests, call `await moduleRef.init()` (or `app.init()`); `compile()` alone does not run `onModuleInit`;
+  - `new CreateTodoUseCase(...)` is not wrapped, which keeps plain unit tests of the business logic free of middlewares. To run such an instance, or any function outside DI, through middlewares, use the core directly:
+
+```typescript
+const execute = (command: CreateTodoCommand): Promise<CreateTodoResult> =>
+  useCase.execute(command);
+
+await new Pipeline()
+  .use(logging, validation)
+  .withTarget('CreateTodoUseCase.execute')
+  .execute(execute, command);
+```
+
+### In This Repository
+
+```typescript
+// src/app.module.ts
+@Module({
+  imports: [
+    PipelineModule.register(LoggingMiddleware),
+    InfrastructureModule,
+    ApplicationModule,
+    PresentationModule,
+  ],
+})
+export class AppModule {}
+
+// src/application/todo/commands/create-todo/create-todo.use-case.ts
+@Injectable()
+export class CreateTodoUseCase implements UseCase<CreateTodoCommand, CreateTodoResult> {
+  @UsePipeline()
+  async execute(command: CreateTodoCommand): Promise<CreateTodoResult> { /* ... */ }
+}
+```
+
+`LoggingMiddleware` (`src/infrastructure/pipeline/`) logs `→ CreateTodoUseCase.execute` and `← CreateTodoUseCase.execute (n ms)`, or the failure, and rethrows errors unchanged. `test/app.e2e-spec.ts` checks that `POST /api/todos` and a direct `CreateTodoUseCase.execute(...)` call run it, and that an invalid request still gets the exception filter's 400 response.
+
 ## Scope Levels
 
 Middlewares can be registered at 4 scope levels. For each marked method (see [Automatic Wrapping](#automatic-wrapping)), scopes merge in order:
@@ -144,7 +234,7 @@ Global → Module → Class → Method → Target method
 Register in `AppModule` imports. These run for every marked method in the app.
 
 ```typescript
-import { PipelineModule } from '@common/pipeline/index.js';
+import { PipelineModule } from '@common/pipeline';
 
 @Module({
   imports: [
@@ -160,7 +250,7 @@ export class AppModule {}
 Attach to a NestJS module class. These run for the marked methods of the providers declared in that module.
 
 ```typescript
-import { UseModulePipeline } from '@common/pipeline/index.js';
+import { UseModulePipeline } from '@common/pipeline';
 
 @UseModulePipeline(TransactionMiddleware)
 @Module({
@@ -172,7 +262,7 @@ export class TodoModule {}
 Or use the combined decorator:
 
 ```typescript
-import { PipelineModuleDecorator } from '@common/pipeline/index.js';
+import { PipelineModuleDecorator } from '@common/pipeline';
 
 @PipelineModuleDecorator({
   providers: [TransactionMiddleware, CreateTodoUseCase],
@@ -186,7 +276,7 @@ export class TodoModule {}
 Attach to a use case or service class. These run for the marked methods of the class and its subclasses; a class-level decorator does not mark methods by itself.
 
 ```typescript
-import { UsePipeline } from '@common/pipeline/index.js';
+import { UsePipeline } from '@common/pipeline';
 
 @UsePipeline(ValidationMiddleware)
 @Injectable()
@@ -248,13 +338,23 @@ The decorators check their entries at compile time (`npm run typecheck`):
 - **Global and module** (`PipelineModule.register`, `@UseModulePipeline`, `@PipelineModuleDecorator`): generic middlewares only, because they run for every pipelined method.
 
 ```typescript
+// LoggingMiddleware is generic; TrimTitleMiddleware implements IMiddleware<CreateTodoUseCase['execute']>.
 class CreateTodoUseCase {
-  @UsePipeline(LoggingMiddleware, TrimTitleMiddleware) // generic + written for this signature
+  @UsePipeline(LoggingMiddleware, TrimTitleMiddleware)
   async execute(command: CreateTodoCommand): Promise<CreateTodoResult> { /* ... */ }
 }
 
+class PlaceOrderCommand {
+  constructor(
+    readonly orderId: string,
+    readonly quantity: number,
+  ) {}
+}
+
 class PlaceOrderUseCase {
-  @UsePipeline(TrimTitleMiddleware) // TS1241 … Property 'title' is missing in type 'PlaceOrderCommand' …
+  // TS1241 … Type 'CreateTodoCommand' is missing the following properties
+  //          from type 'PlaceOrderCommand': orderId, quantity
+  @UsePipeline(TrimTitleMiddleware)
   async execute(command: PlaceOrderCommand): Promise<PlaceOrderResult> { /* ... */ }
 }
 ```
@@ -264,6 +364,8 @@ A class-level mismatch names the method (`__pipelineIncompatibleMethods: "execut
 ## DI-Aware Middlewares
 
 ### @Injectable() Middleware (with DI dependencies)
+
+An illustrative transaction middleware (`DataSource` is TypeORM's; this repository has no database):
 
 ```typescript
 @Injectable()
@@ -328,71 +430,22 @@ Pass an **instance** — used directly, no DI resolution:
 @UsePipeline(TransactionMiddleware, new RetryMiddleware(3))
 ```
 
-## Automatic Wrapping
-
-`PipelineModule.register()` adds `PipelineExplorer`. When the application starts (`onModuleInit`), it finds the provider methods marked with a method-level `@UsePipeline(...)` and wraps them. Calling such a method — from a controller, a GraphQL resolver, a Kafka handler, a worker, an MCP tool or a test — runs the pipeline. The use case contains no `resolve(...)` call and no method name string:
-
-```typescript
-@Injectable()
-export class CreateTodoUseCase {
-  @UsePipeline() // marks the method; global, module and class middlewares apply
-  async execute(command: CreateTodoCommand): Promise<CreateTodoResult> {
-    // business logic only
-  }
-}
-```
-
-- **What is wrapped**: only methods marked at method level, also through inheritance. The module scope is the provider's host module. Global, module and class scopes add middlewares to marked methods; they never wrap anything on their own.
-- **Inside the wrapper**: `ctx.target` is `ClassName.methodName`; the original method gets `this` and the arguments as changed by the middlewares; its errors are rethrown unchanged, so exception filters keep working.
-- **Built once**: each method's pipeline is built at startup; a call only creates its context.
-- **Startup errors** (`PipelineConfigurationError`):
-  - a class middleware that is not registered as a provider — the message names the middleware, the method and where to register it;
-  - a request-scoped middleware, or a marked provider that is request-scoped or transient;
-  - `@UsePipeline` on a controller, or on a transport handler method of a provider (`@Query`, `@MessagePattern`, ...). Nest calls those handlers itself, so the wrapper would be bypassed: mark the use case method they call instead;
-  - a class-level `@UsePipeline` on a class without any marked method.
-- **Only instances created by Nest are wrapped, after `init()`**:
-  - in tests, call `await moduleRef.init()` (or `app.init()`); `compile()` alone does not run `onModuleInit`;
-  - `new CreateTodoUseCase(...)` is not wrapped, which keeps plain unit tests of the business logic free of middlewares. To run such an instance, or any function outside DI, through middlewares, use the core directly:
-
-```typescript
-const execute = (command: CreateTodoCommand): Promise<CreateTodoResult> =>
-  useCase.execute(command);
-
-await new Pipeline()
-  .use(logging, validation)
-  .withTarget('CreateTodoUseCase.execute')
-  .execute(execute, command);
-```
-
-### In This Repository
-
-```typescript
-// src/app.module.ts
-@Module({
-  imports: [PipelineModule.register(LoggingMiddleware), InfrastructureModule, ApplicationModule, PresentationModule],
-})
-export class AppModule {}
-
-// src/application/todo/commands/create-todo/create-todo.use-case.ts
-@Injectable()
-export class CreateTodoUseCase implements UseCase<CreateTodoCommand, CreateTodoResult> {
-  @UsePipeline()
-  async execute(command: CreateTodoCommand): Promise<CreateTodoResult> { /* ... */ }
-}
-```
-
-`LoggingMiddleware` (`src/infrastructure/pipeline/`) logs `→ CreateTodoUseCase.execute` and `← CreateTodoUseCase.execute (n ms)`, or the failure, and rethrows errors unchanged. `test/app.e2e-spec.ts` checks that `POST /api/todos` and a direct `CreateTodoUseCase.execute(...)` call run it, and that an invalid request still gets the exception filter's 400 response.
-
 ## PipelineResolver (Manual Use)
 
-The explorer collects the entries through `PipelineResolver`. Use `resolve(moduleClass?, targetClass?, methodName?)` directly only when a function outside DI should run with the configured scopes. It resolves class middlewares on every call and does not support transient ones.
+The explorer collects the entries through `PipelineResolver`. Use `resolve(moduleClass?, targetClass?, methodName?)` directly only when something outside DI — for example a use case created with `new` in a script — should run with the configured scopes. It resolves class middlewares on every call and does not support transient ones.
 
 ```typescript
-const pipeline = pipelineResolver
-  .resolve<CreateTodoUseCase['execute']>(TodoModule, CreateTodoUseCase, 'execute')
+const resolver = app.get(PipelineResolver); // app: the Nest application context
+const useCase = new CreateTodoUseCase(repository); // created by hand, so not wrapped
+
+const pipeline = resolver
+  .resolve<CreateTodoUseCase['execute']>(ApplicationModule, CreateTodoUseCase, 'execute')
   .withTarget('CreateTodoUseCase.execute');
 
-await pipeline.execute(execute, command);
+const result = await pipeline.execute(
+  (command: CreateTodoCommand) => useCase.execute(command),
+  new CreateTodoCommand('Buy milk'),
+);
 ```
 
 ## Execution Order
@@ -448,6 +501,17 @@ Do not import `@common/pipeline` in the browser: that barrel also exports the Ne
 | `getMiddlewares()` | Returns a shallow copy of the middleware array |
 | `withTarget(name)` | Returns a new pipeline (copy of the middlewares) whose executions report `name` as `ctx.target` |
 | `execute(fn, ...args)` | Run `fn(...args)` through the middlewares; resolves to the awaited result of `fn` |
+
+### Types and Helpers
+
+| Export | Description |
+|--------|-------------|
+| `Fn` | `(...args: any[]) => any` — any function; the default for `F` |
+| `Result<F>` | `Awaited<ReturnType<F>>` — what `execute` resolves to |
+| `NextFunction<F>` | `() => Promise<Result<F>>`, passed to `handle` |
+| `MiddlewareEntry<F>` | A middleware class (resolved by DI) or a middleware instance |
+| `isMiddlewareClass(entry)` | `true` when the entry is a class type |
+| `PipelineModuleMetadata` | `ModuleMetadata` plus `pipeline`, for `@PipelineModuleDecorator` |
 
 ### `PipelineResolver`
 
