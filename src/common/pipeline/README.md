@@ -25,6 +25,7 @@ src/common/pipeline/
   middleware.interface.ts    # MiddlewareEntry (class type or instance), isMiddlewareClass
   pipeline.constants.ts      # Symbol tokens and metadata keys
   pipeline.decorator.ts      # @UsePipeline, @UseModulePipeline, @PipelineModuleDecorator
+  pipeline.metadata.ts       # Stores entries (stacking) and reads them along the inheritance chain
   pipeline.resolver.ts       # Scope merging + DI resolution via ModuleRef
   pipeline.module.ts         # PipelineModule.register() NestJS DynamicModule
   index.ts                   # Barrel exports (core + NestJS layer)
@@ -202,6 +203,33 @@ export class CreateTodoUseCase {
   }
 }
 ```
+
+### Stacking and Inheritance
+
+Entries accumulate — nothing is overridden — and run in reading order, outer to inner:
+
+- **Stacked decorators**: the top-most decorator is outermost. `@UsePipeline(A) @UsePipeline(B)` behaves like `@UsePipeline(A, B)` and `use(A, B)`. The same holds for `@UseModulePipeline` and `@PipelineModuleDecorator`, also when combined.
+- **Inheritance**: within each scope, base class entries come before derived class entries. A subclass without its own decorator inherits the base entries, and an overridden method keeps the base method's entries.
+
+```typescript
+@UsePipeline(BaseClassMw)
+class BaseUseCase {
+  @UsePipeline(BaseMethodMw)
+  async execute(command: Command): Promise<Result> { /* ... */ }
+}
+
+@UsePipeline(DerivedClassMw1)
+@UsePipeline(DerivedClassMw2)
+class DerivedUseCase extends BaseUseCase {
+  @UsePipeline(DerivedMethodMw)
+  async execute(command: Command): Promise<Result> { /* ... */ }
+}
+
+// Global → Module → BaseClassMw → DerivedClassMw1 → DerivedClassMw2
+//        → BaseMethodMw → DerivedMethodMw → target
+```
+
+A middleware declared on several levels runs once per declaration.
 
 ## DI-Aware Middlewares
 
@@ -397,10 +425,10 @@ npm run typecheck   # type-level tests (*.types.spec.ts) and the browser-like co
 | `core/pipeline.types.spec.ts` | 4 | Compile-time checks, enforced by `npm run typecheck`: arguments, result, `ctx.args`, `next()`, typed pipelines, readonly fields |
 | `core/core-isolation.spec.ts` | 4 | `core/` imports nothing outside `core/` and does not use reflect-metadata |
 | `core/api-client.example.spec.ts` | 2 | Front-end API client chain (auth, correlation id, retry, error mapping, log) |
-| `pipeline.decorator.spec.ts` | 12 | @UsePipeline class/method, @UseModulePipeline, @PipelineModuleDecorator |
-| `pipeline.resolver.spec.ts` | 9 | All 4 scopes, partial scopes, DI resolution, mixed entries |
+| `pipeline.decorator.spec.ts` | 17 | @UsePipeline class/method, @UseModulePipeline, @PipelineModuleDecorator, stacked decorators |
+| `pipeline.resolver.spec.ts` | 15 | All 4 scopes, partial scopes, DI resolution, mixed entries, stacking and inheritance order |
 | `pipeline.module.spec.ts` | 10 | register() with class types/instances/mixed, DI integration, `PIPELINE_RESOLVER` alias, global availability |
-| **Total** | **65** | |
+| **Total** | **76** | |
 
 ## Design Decisions
 
@@ -410,9 +438,9 @@ npm run typecheck   # type-level tests (*.types.spec.ts) and the browser-like co
 
 3. **Class types vs instances**: Supporting both allows `@Injectable()` middlewares with full DI (database connections, loggers, config) alongside simple parameterized middlewares (`new RetryMiddleware(3)`) that don't need DI.
 
-4. **Scope merging, not override**: All scopes accumulate. A method-level pipeline doesn't replace the class-level one — it extends it. This follows the principle of least surprise.
+4. **Scope merging, not override**: All scopes accumulate, and so do stacked decorators and base/derived classes. A method-level pipeline doesn't replace the class-level one — it extends it. This follows the principle of least surprise.
 
-5. **`reduceRight` composition**: First-added middleware is outermost, matching the natural reading order of decorator stacking and `use()` calls.
+5. **Reading-order composition**: First-added middleware is outermost (`reduceRight`). The same rule covers `use()` calls, the arguments of one decorator, stacked decorators (top-most first) and inheritance (base class first).
 
 6. **The target is not wrapped**: `execute(fn, ...args)` runs any function as is — a plain `sayHello(firstName, lastName)` needs no adapter, decorator or single-input object.
 
