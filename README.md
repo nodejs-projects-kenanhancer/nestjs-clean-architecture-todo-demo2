@@ -435,6 +435,8 @@ src/
 │   │       ├── rest-error-response.strategy.ts
 │   │       ├── graphql-error-response.strategy.ts
 │   │       └── kafka-error-response.strategy.ts
+│   ├── pipeline/                    # Pipeline middlewares used by the app
+│   │   └── logging.middleware.ts    # Logs every pipelined use case call
 │   └── errors/                      # Infrastructure-specific errors
 │
 └── presentation/                    # Interface adapters
@@ -590,6 +592,8 @@ A transport-agnostic middleware pipeline system located in `src/common/pipeline/
 - **Automatic wrapping** - At startup, provider methods marked with `@UsePipeline()` are wrapped, so every caller (REST, GraphQL, Kafka, workers, tests) runs the same middlewares; invalid set-ups stop the start with a `PipelineConfigurationError`
 
 `core/` has no NestJS or reflect-metadata imports, so the same pipeline also runs in the browser.
+
+In this repository, `AppModule` registers `LoggingMiddleware` globally (`PipelineModule.register(LoggingMiddleware)`) and `CreateTodoUseCase.execute` is marked with `@UsePipeline()`. A REST request and a direct call of the use case both run through it, and the exception filters still produce the same HTTP response (see `test/app.e2e-spec.ts`).
 
 ### Execution Model
 

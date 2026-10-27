@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 
+import { UsePipeline } from '@common/pipeline';
 import type { UseCase } from '@core/contracts';
 import { Todo } from '@domain/entities';
 import { TodoValidationError } from '@domain/errors';
@@ -17,6 +18,7 @@ export class CreateTodoUseCase implements UseCase<CreateTodoCommand, CreateTodoR
     private readonly todoRepository: TodoRepository,
   ) {}
 
+  @UsePipeline()
   async execute(command: CreateTodoCommand): Promise<CreateTodoResult> {
     try {
       const title = TodoTitle.create(command.title);

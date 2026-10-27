@@ -361,6 +361,25 @@ await new Pipeline()
   .execute(execute, command);
 ```
 
+### In This Repository
+
+```typescript
+// src/app.module.ts
+@Module({
+  imports: [PipelineModule.register(LoggingMiddleware), InfrastructureModule, ApplicationModule, PresentationModule],
+})
+export class AppModule {}
+
+// src/application/todo/commands/create-todo/create-todo.use-case.ts
+@Injectable()
+export class CreateTodoUseCase implements UseCase<CreateTodoCommand, CreateTodoResult> {
+  @UsePipeline()
+  async execute(command: CreateTodoCommand): Promise<CreateTodoResult> { /* ... */ }
+}
+```
+
+`LoggingMiddleware` (`src/infrastructure/pipeline/`) logs `→ CreateTodoUseCase.execute` and `← CreateTodoUseCase.execute (n ms)`, or the failure, and rethrows errors unchanged. `test/app.e2e-spec.ts` checks that `POST /api/todos` and a direct `CreateTodoUseCase.execute(...)` call run it, and that an invalid request still gets the exception filter's 400 response.
+
 ## PipelineResolver (Manual Use)
 
 The explorer collects the entries through `PipelineResolver`. Use `resolve(moduleClass?, targetClass?, methodName?)` directly only when a function outside DI should run with the configured scopes. It resolves class middlewares on every call and does not support transient ones.
