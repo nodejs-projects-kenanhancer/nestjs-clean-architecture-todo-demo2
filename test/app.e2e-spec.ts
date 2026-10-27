@@ -6,6 +6,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 
 import { AppModule } from './../src/app.module';
+import { configureApp } from './../src/app.setup';
 import { CreateTodoCommand, CreateTodoUseCase } from './../src/application/todo';
 import { KafkaService } from './../src/infrastructure/messaging/kafka/kafka.service';
 
@@ -20,7 +21,7 @@ describe('AppController (e2e)', () => {
       .useValue(mock<KafkaService>())
       .compile();
 
-    app = moduleFixture.createNestApplication();
+    app = configureApp(moduleFixture.createNestApplication());
     await app.init();
   });
 
@@ -69,12 +70,13 @@ describe('AppController (e2e)', () => {
       expect(logs).toEqual(expect.arrayContaining(pipelineLogs));
     });
 
-    it('/api/todos (POST) with an empty title should keep the exception filter response', async () => {
+    it('/api/todos (POST) with a whitespace-only title should reach the use case and get the domain error response', async () => {
       const response = await request(app.getHttpServer())
         .post('/api/todos')
-        .send({ title: '' })
+        .send({ title: '   ' })
         .expect(400);
 
+      expect(logs).toContain('→ CreateTodoUseCase.execute');
       expect(response.body).toMatchObject({
         type: 'https://api.example.com/problems/validation-error',
         title: 'Validation Failed',
@@ -82,6 +84,39 @@ describe('AppController (e2e)', () => {
         code: 'TODO_VALIDATION_FAILED',
         detail: 'Title must be at least 1 character(s)',
         instance: '/api/todos',
+      });
+    });
+
+    it('/api/todos (POST) with an empty title should be rejected by ValidationPipe before the use case', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/todos')
+        .send({ title: '' })
+        .expect(400);
+
+      expect(logs).not.toContain('→ CreateTodoUseCase.execute');
+      expect(response.body).toMatchObject({
+        type: 'https://api.example.com/problems/bad-request',
+        title: 'Bad Request',
+        status: 400,
+        code: 'BAD_REQUEST',
+        detail: 'One or more validation errors occurred',
+        instance: '/api/todos',
+        errors: [
+          { field: 'unknown', message: 'title must be longer than or equal to 1 characters' },
+        ],
+      });
+    });
+
+    it('/api/todos (POST) with an unknown property should be rejected by ValidationPipe', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/todos')
+        .send({ title: 'Learn pipelines', priority: 'high' })
+        .expect(400);
+
+      expect(logs).not.toContain('→ CreateTodoUseCase.execute');
+      expect(response.body).toMatchObject({
+        code: 'BAD_REQUEST',
+        errors: [{ field: 'unknown', message: 'property priority should not exist' }],
       });
     });
   });
