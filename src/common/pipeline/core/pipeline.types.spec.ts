@@ -40,7 +40,8 @@ describe('Pipeline types', () => {
   it('should type ctx.args and next() from the function', () => {
     const trim: IMiddleware<typeof sayHello> = {
       handle: async (ctx, next) => {
-        ctx.args = [ctx.args[0].trim(), ctx.args[1].trim()];
+        const [firstName, lastName] = ctx.args;
+        ctx.args = [firstName.trim(), lastName.trim()];
         return next();
       },
     };

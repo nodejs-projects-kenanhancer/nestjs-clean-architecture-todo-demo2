@@ -146,7 +146,8 @@ describe('Pipeline', () => {
       const receivedInputs: OrderCommand[] = [];
 
       const mw = createMiddleware<PlaceOrder>(async (ctx, next) => {
-        receivedInputs.push(ctx.args[0]);
+        const [input] = ctx.args;
+        receivedInputs.push(input);
         return next();
       });
 
@@ -261,7 +262,8 @@ describe('Pipeline', () => {
       };
       const trim: IMiddleware<typeof sayHello> = {
         handle: async (ctx, next) => {
-          ctx.args = [ctx.args[0].trim(), ctx.args[1].trim()];
+          const [firstName, lastName] = ctx.args;
+          ctx.args = [firstName.trim(), lastName.trim()];
           return next();
         },
       };
@@ -285,7 +287,8 @@ describe('Pipeline', () => {
       let seenBySecond: unknown[] = [];
       const second: IMiddleware<typeof sayHello> = {
         handle: async (ctx, next) => {
-          seenBySecond = [ctx.args[0], ctx.metadata.get('requestId')];
+          const [firstName] = ctx.args;
+          seenBySecond = [firstName, ctx.metadata.get('requestId')];
           return next();
         },
       };
