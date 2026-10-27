@@ -375,7 +375,7 @@ Do not import `@common/pipeline` in the browser: that barrel also exports the Ne
 | Token | Description |
 |-------|-------------|
 | `GLOBAL_PIPELINE` | DI token for global middleware entries array |
-| `PIPELINE_RESOLVER` | DI token for PipelineResolver |
+| `PIPELINE_RESOLVER` | Alias token for `PipelineResolver` (same instance) |
 | `CLASS_PIPELINE_METADATA` | Reflect metadata key for class-level decorators |
 | `METHOD_PIPELINE_METADATA` | Reflect metadata key for method-level decorators |
 | `MODULE_PIPELINE_METADATA` | Reflect metadata key for module-level decorators |
@@ -399,8 +399,8 @@ npm run typecheck   # type-level tests (*.types.spec.ts) and the browser-like co
 | `core/api-client.example.spec.ts` | 2 | Front-end API client chain (auth, correlation id, retry, error mapping, log) |
 | `pipeline.decorator.spec.ts` | 12 | @UsePipeline class/method, @UseModulePipeline, @PipelineModuleDecorator |
 | `pipeline.resolver.spec.ts` | 9 | All 4 scopes, partial scopes, DI resolution, mixed entries |
-| `pipeline.module.spec.ts` | 8 | register() with class types/instances/mixed, DI integration |
-| **Total** | **63** | |
+| `pipeline.module.spec.ts` | 10 | register() with class types/instances/mixed, DI integration, `PIPELINE_RESOLVER` alias, global availability |
+| **Total** | **65** | |
 
 ## Design Decisions
 

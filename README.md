@@ -619,7 +619,7 @@ const result = await new Pipeline().use(trim).execute(sayHello, ' Kenan ', ' Han
 - Error-aware (middleware can catch and transform errors) and retry-friendly (`next()` can be called again)
 - Short-circuitable (can return without calling next)
 - Mergeable pipelines via `useAll()`
-- 63 tests in `src/common/pipeline`, plus type-level tests checked by `npm run typecheck`
+- Test suite in `src/common/pipeline` (per-file counts in its README), plus type-level tests checked by `npm run typecheck`
 
 ## Tech Stack
 
