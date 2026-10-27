@@ -1,0 +1,14 @@
+{
+  // Browser-like compile of the framework-free pipeline core: no Node types, no decorators.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM"],
+    "types": [],
+    "experimentalDecorators": false,
+    "emitDecoratorMetadata": false,
+    "noEmit": true,
+    "incremental": false
+  },
+  "include": ["src/common/pipeline/core/**/*.ts"],
+  "exclude": ["src/common/pipeline/core/**/*.spec.ts"]
+}

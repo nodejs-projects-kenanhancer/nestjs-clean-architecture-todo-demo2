@@ -3,7 +3,7 @@ import { Test } from '@nestjs/testing';
 
 import 'reflect-metadata';
 
-import { IMiddleware, NextFunction } from './middleware.interface';
+import { Context, IMiddleware, NextFunction } from './core';
 import { GLOBAL_PIPELINE } from './pipeline.constants';
 import { UseModulePipeline, UsePipeline } from './pipeline.decorator';
 import { PipelineResolver } from './pipeline.resolver';
@@ -18,23 +18,25 @@ interface OrderResult {
   orderId: string;
 }
 
+type PlaceOrder = (command: OrderCommand) => Promise<OrderResult>;
+
 @Injectable()
-class LoggingMiddleware implements IMiddleware<OrderCommand, OrderResult> {
-  handle(_input: OrderCommand, next: NextFunction<OrderResult>): Promise<OrderResult> {
+class LoggingMiddleware implements IMiddleware<PlaceOrder> {
+  handle(_ctx: Context<PlaceOrder>, next: NextFunction<PlaceOrder>): Promise<OrderResult> {
     return next();
   }
 }
 
 @Injectable()
-class ValidationMiddleware implements IMiddleware<OrderCommand, OrderResult> {
-  handle(_input: OrderCommand, next: NextFunction<OrderResult>): Promise<OrderResult> {
+class ValidationMiddleware implements IMiddleware<PlaceOrder> {
+  handle(_ctx: Context<PlaceOrder>, next: NextFunction<PlaceOrder>): Promise<OrderResult> {
     return next();
   }
 }
 
-class SimpleMiddleware implements IMiddleware<OrderCommand, OrderResult> {
+class SimpleMiddleware implements IMiddleware<PlaceOrder> {
   constructor(readonly label: string) {}
-  handle(_input: OrderCommand, next: NextFunction<OrderResult>): Promise<OrderResult> {
+  handle(_ctx: Context<PlaceOrder>, next: NextFunction<PlaceOrder>): Promise<OrderResult> {
     return next();
   }
 }
@@ -61,11 +63,7 @@ describe('PipelineResolver', () => {
       }).compile();
 
       const resolver = module.get(PipelineResolver);
-      const pipeline = resolver.resolve<OrderCommand, OrderResult>(
-        TestModule,
-        TestClass,
-        'execute',
-      );
+      const pipeline = resolver.resolve<PlaceOrder>(TestModule, TestClass, 'execute');
       const middlewares = pipeline.getMiddlewares();
 
       expect(middlewares).toHaveLength(4);
@@ -85,7 +83,7 @@ describe('PipelineResolver', () => {
       }).compile();
 
       const resolver = module.get(PipelineResolver);
-      const pipeline = resolver.resolve<OrderCommand, OrderResult>();
+      const pipeline = resolver.resolve<PlaceOrder>();
       const middlewares = pipeline.getMiddlewares();
 
       expect(middlewares).toHaveLength(1);
@@ -107,7 +105,7 @@ describe('PipelineResolver', () => {
       }).compile();
 
       const resolver = module.get(PipelineResolver);
-      const pipeline = resolver.resolve<OrderCommand, OrderResult>(null, TestClass, 'execute');
+      const pipeline = resolver.resolve<PlaceOrder>(null, TestClass, 'execute');
       const middlewares = pipeline.getMiddlewares();
 
       expect(middlewares).toHaveLength(2);
@@ -121,7 +119,7 @@ describe('PipelineResolver', () => {
       }).compile();
 
       const resolver = module.get(PipelineResolver);
-      const pipeline = resolver.resolve<OrderCommand, OrderResult>();
+      const pipeline = resolver.resolve<PlaceOrder>();
       const middlewares = pipeline.getMiddlewares();
 
       expect(middlewares).toHaveLength(0);
@@ -139,7 +137,7 @@ describe('PipelineResolver', () => {
       }).compile();
 
       const resolver = module.get(PipelineResolver);
-      const pipeline = resolver.resolve<OrderCommand, OrderResult>();
+      const pipeline = resolver.resolve<PlaceOrder>();
       const middlewares = pipeline.getMiddlewares();
 
       expect(middlewares).toHaveLength(1);
@@ -154,7 +152,7 @@ describe('PipelineResolver', () => {
       }).compile();
 
       const resolver = module.get(PipelineResolver);
-      const pipeline = resolver.resolve<OrderCommand, OrderResult>();
+      const pipeline = resolver.resolve<PlaceOrder>();
       const middlewares = pipeline.getMiddlewares();
 
       expect(middlewares).toHaveLength(1);
@@ -172,7 +170,7 @@ describe('PipelineResolver', () => {
       }).compile();
 
       const resolver = module.get(PipelineResolver);
-      const pipeline = resolver.resolve<OrderCommand, OrderResult>(null, TestClass);
+      const pipeline = resolver.resolve<PlaceOrder>(null, TestClass);
       const middlewares = pipeline.getMiddlewares();
 
       expect(middlewares).toHaveLength(2);
@@ -192,7 +190,7 @@ describe('PipelineResolver', () => {
       }).compile();
 
       const resolver = module.get(PipelineResolver);
-      const pipeline = resolver.resolve<OrderCommand, OrderResult>(TestModule, TestClass);
+      const pipeline = resolver.resolve<PlaceOrder>(TestModule, TestClass);
       const middlewares = pipeline.getMiddlewares();
 
       expect(middlewares).toHaveLength(2);
@@ -205,16 +203,19 @@ describe('PipelineResolver', () => {
     it('should produce a working pipeline that executes in scope order', async () => {
       const order: string[] = [];
 
-      const globalMw: IMiddleware<OrderCommand, OrderResult> = {
-        handle: async (_input, next) => {
+      const globalMw: IMiddleware<PlaceOrder> = {
+        handle: async (_ctx, next) => {
           order.push('global');
           return next();
         },
       };
 
       @Injectable()
-      class TrackedMiddleware implements IMiddleware<OrderCommand, OrderResult> {
-        async handle(_input: OrderCommand, next: NextFunction<OrderResult>): Promise<OrderResult> {
+      class TrackedMiddleware implements IMiddleware<PlaceOrder> {
+        async handle(
+          _ctx: Context<PlaceOrder>,
+          next: NextFunction<PlaceOrder>,
+        ): Promise<OrderResult> {
           order.push('class-di');
           return next();
         }
@@ -232,12 +233,15 @@ describe('PipelineResolver', () => {
       }).compile();
 
       const resolver = module.get(PipelineResolver);
-      const pipeline = resolver.resolve<OrderCommand, OrderResult>(null, TestClass);
+      const pipeline = resolver.resolve<PlaceOrder>(null, TestClass);
 
-      const result = await pipeline.execute({ orderId: 'ORD-001', quantity: 5 }, async () => {
-        order.push('handler');
-        return { success: true, orderId: 'ORD-001' };
-      });
+      const result = await pipeline.execute(
+        async (_command: OrderCommand) => {
+          order.push('handler');
+          return { success: true, orderId: 'ORD-001' };
+        },
+        { orderId: 'ORD-001', quantity: 5 },
+      );
 
       expect(result).toEqual({ success: true, orderId: 'ORD-001' });
       expect(order).toEqual(['global', 'class-di', 'handler']);

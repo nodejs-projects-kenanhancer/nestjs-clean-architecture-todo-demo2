@@ -357,8 +357,11 @@ src/
 │
 ├── common/                          # Shared utilities and modules
 │   └── pipeline/                    # Transport-agnostic middleware pipeline
-│       ├── middleware.interface.ts   # IMiddleware<TInput, TOutput>
-│       ├── pipeline.ts              # Pipeline class with fluent API
+│       ├── core/                    # Framework-free core (also runs in the browser)
+│       │   ├── context.ts           # Context: args, target, metadata
+│       │   ├── middleware.ts        # IMiddleware<F>, NextFunction<F>
+│       │   └── pipeline.ts          # Pipeline: execute(fn, ...args), withTarget
+│       ├── middleware.interface.ts   # MiddlewareEntry (class type or instance)
 │       ├── pipeline.module.ts       # NestJS module integration
 │       ├── pipeline.decorator.ts    # @UsePipeline, @UseModulePipeline
 │       ├── pipeline.resolver.ts     # Pipeline dependency resolver
@@ -577,41 +580,46 @@ A transport-agnostic middleware pipeline system located in `src/common/pipeline/
 
 ### Core Components
 
-- **`Pipeline<TInput, TOutput>`** - Main pipeline class with fluent API
-- **`IMiddleware<TInput, TOutput>`** - Middleware interface with `handle(input, next)` method
+- **`Pipeline<F>`** - Runs any function through the middlewares with `execute(fn, ...args)`; `withTarget(name)` names the target
+- **`IMiddleware<F>`** - Middleware interface with `handle(ctx, next)`; `next()` takes no arguments
+- **`Context<F>`** - One object per execution shared by all middlewares and the target: `args`, `target`, `metadata`
 - **Decorators** - `@UsePipeline()`, `@UseModulePipeline()`, `@PipelineModuleDecorator()` for declarative usage
+
+`core/` has no NestJS or reflect-metadata imports, so the same pipeline also runs in the browser.
 
 ### Execution Model
 
 ```
-Input → MW1.before → MW2.before → Handler → MW2.after → MW1.after → Output
+fn(...args) → MW1.before → MW2.before → fn(...ctx.args) → MW2.after → MW1.after → result
 ```
 
 ### Example
 
 ```typescript
-const pipeline = new Pipeline<string, string>();
+function sayHello(firstName: string, lastName: string): string {
+  return `Hello ${firstName} ${lastName}`;
+}
 
-pipeline.use({
-  async handle(input: string, next: NextFunction<string>) {
-    console.log('before');
-    const result = await next();
-    console.log('after');
-    return result;
+const trim: IMiddleware<typeof sayHello> = {
+  async handle(ctx, next) {
+    ctx.args = [ctx.args[0].trim(), ctx.args[1].trim()];
+    return next();
   },
-});
+};
 
-const result = await pipeline.execute('hello', async () => 'world');
+const result = await new Pipeline().use(trim).execute(sayHello, ' Kenan ', ' Hancer ');
+// result = 'Hello Kenan Hancer'
 ```
 
 ### Features
 
-- Type-safe generics for input/output
+- The target function is passed as is: plain multi-argument functions need no wrapping
+- Arguments and result type-checked against the function (`execute(sayHello, 'Kenan')` does not compile)
 - Composable and chainable middlewares
-- Error-aware (middleware can catch and transform errors)
+- Error-aware (middleware can catch and transform errors) and retry-friendly (`next()` can be called again)
 - Short-circuitable (can return without calling next)
 - Mergeable pipelines via `useAll()`
-- Comprehensive test suite with 45 tests
+- 63 tests in `src/common/pipeline`, plus type-level tests checked by `npm run typecheck`
 
 ## Tech Stack
 

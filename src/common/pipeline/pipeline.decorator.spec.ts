@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 import 'reflect-metadata';
 
-import { IMiddleware, NextFunction } from './middleware.interface';
+import { Context, IMiddleware, NextFunction } from './core';
 import {
   CLASS_PIPELINE_METADATA,
   METHOD_PIPELINE_METADATA,
@@ -20,15 +20,17 @@ interface OrderResult {
   orderId: string;
 }
 
-class StubMiddleware implements IMiddleware<OrderCommand, OrderResult> {
-  handle(_input: OrderCommand, next: NextFunction<OrderResult>): Promise<OrderResult> {
+type PlaceOrder = (command: OrderCommand) => Promise<OrderResult>;
+
+class StubMiddleware implements IMiddleware<PlaceOrder> {
+  handle(_ctx: Context<PlaceOrder>, next: NextFunction<PlaceOrder>): Promise<OrderResult> {
     return next();
   }
 }
 
 @Injectable()
-class InjectableMiddleware implements IMiddleware<OrderCommand, OrderResult> {
-  handle(_input: OrderCommand, next: NextFunction<OrderResult>): Promise<OrderResult> {
+class InjectableMiddleware implements IMiddleware<PlaceOrder> {
+  handle(_ctx: Context<PlaceOrder>, next: NextFunction<PlaceOrder>): Promise<OrderResult> {
     return next();
   }
 }

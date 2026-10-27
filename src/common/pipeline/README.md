@@ -17,53 +17,103 @@ This library solves that by attaching middleware pipelines at the **application 
 
 ```
 src/common/pipeline/
+  core/                      # Framework-free core: no NestJS, no reflect-metadata, runs in the browser
+    context.ts               # Fn, Result, Context (args, target, metadata)
+    middleware.ts            # IMiddleware, NextFunction
+    pipeline.ts              # Pipeline: use, useAll, getMiddlewares, withTarget, execute(fn, ...args)
+    index.ts                 # Core barrel (the only import for front-end code)
+  middleware.interface.ts    # MiddlewareEntry (class type or instance), isMiddlewareClass
   pipeline.constants.ts      # Symbol tokens and metadata keys
-  middleware.interface.ts     # IMiddleware, NextFunction, MiddlewareEntry
-  pipeline.ts                # Pipeline class (pure, no NestJS dependency)
   pipeline.decorator.ts      # @UsePipeline, @UseModulePipeline, @PipelineModuleDecorator
   pipeline.resolver.ts       # Scope merging + DI resolution via ModuleRef
   pipeline.module.ts         # PipelineModule.register() NestJS DynamicModule
-  index.ts                   # Barrel exports
+  index.ts                   # Barrel exports (core + NestJS layer)
 ```
 
 ## Core Concepts
 
-### IMiddleware
+### Context
 
-The fundamental contract. Each middleware receives the input and a `next` function to call the next middleware (or the final handler).
+One `Context` per execution, shared by every middleware and the target function:
 
 ```typescript
-interface IMiddleware<TInput = unknown, TOutput = unknown> {
-  handle(input: TInput, next: NextFunction<TOutput>): Promise<TOutput>;
+interface Context<F extends Fn = Fn> {
+  args: Parameters<F>;                       // the arguments the target will be called with
+  readonly target: string;                   // 'sayHello', 'CreateTodoUseCase.execute', ...
+  readonly metadata: Map<string | symbol, unknown>;
 }
 ```
+
+A change to `ctx.args` — in place, or by assigning a new tuple — is what the next middleware and the target see. Middlewares share other data through `ctx.metadata`. Every execution gets a fresh context.
+
+### IMiddleware
+
+```typescript
+type NextFunction<F extends Fn = Fn> = () => Promise<Result<F>>; // no arguments
+
+interface IMiddleware<F extends Fn = Fn> {
+  handle(ctx: Context<F>, next: NextFunction<F>): Promise<Result<F>>;
+}
+```
+
+`F` is the function the middleware is written for, and `Result<F>` is `Awaited<ReturnType<F>>`. A plain `IMiddleware` (default `Fn`) is generic and fits any target; `IMiddleware<typeof sayHello>` or `IMiddleware<CreateTodoUseCase['execute']>` types `ctx.args` and the result.
 
 ### Pipeline
 
-A pure class (no NestJS dependency) that composes middlewares using `reduceRight` — first-added middleware is the outermost wrapper.
+A pure class that composes middlewares using `reduceRight` — first-added middleware is the outermost wrapper. `execute(fn, ...args)` is the single entry point: the target is passed as is, with its own arguments, and is never wrapped or modified.
 
 ```typescript
-interface OrderCommand {
-  orderId: string;
-  quantity: number;
+function sayHello(firstName: string, lastName: string): string {
+  return `Hello ${firstName} ${lastName}`;
 }
 
-interface OrderResult {
-  success: boolean;
-  orderId: string;
-}
-
-const pipeline = new Pipeline<OrderCommand, OrderResult>();
-pipeline.use(loggingMiddleware, validationMiddleware);
-
-const result = await pipeline.execute(
-  { orderId: 'ORD-001', quantity: 5 },
-  async (input) => {
-    // your handler logic
-    return { success: true, orderId: input.orderId };
+const log: IMiddleware = {
+  async handle(ctx, next) {
+    console.log(`→ ${ctx.target}(${JSON.stringify(ctx.args)})`);
+    const result = await next();
+    console.log(`← ${ctx.target} = ${JSON.stringify(result)}`);
+    return result;
   },
-);
+};
+
+const trim: IMiddleware<typeof sayHello> = {
+  async handle(ctx, next) {
+    ctx.args = [ctx.args[0].trim(), ctx.args[1].trim()];
+    return next();
+  },
+};
+
+await new Pipeline().use(log, trim).execute(sayHello, '  Kenan ', ' Hancer  ');
+// → sayHello(["  Kenan "," Hancer  "])
+// ← sayHello = "Hello Kenan Hancer"
 ```
+
+Arguments and the result are checked against the function: `execute(sayHello, 'Kenan')` is TS2554 and `execute(sayHello, 'Kenan', 42)` is TS2345. The result is always a `Promise`, also for synchronous functions. `new Pipeline<typeof sayHello>()` additionally rejects middlewares written for another function.
+
+Commands with `readonly` fields are replaced, not mutated (`command.title = ...` is TS2540):
+
+```typescript
+const trimTitle: IMiddleware<CreateTodoUseCase['execute']> = {
+  async handle(ctx, next) {
+    const [command] = ctx.args;
+    ctx.args = [new CreateTodoCommand(command.title.trim(), command.description)];
+    return next();
+  },
+};
+```
+
+### Target name: `withTarget`
+
+`ctx.target` is the function name, or `'anonymous'`. When the name is not meaningful — a bound method is called `'bound execute'` — `withTarget(name)` returns a new pipeline with a copy of the middlewares that reports `name`. The original pipeline is not changed, so a shared pipeline stays safe for concurrent executions.
+
+```typescript
+const execute = (command: CreateTodoCommand): Promise<CreateTodoResult> =>
+  useCase.execute(command);
+
+await pipeline.withTarget('CreateTodoUseCase.execute').execute(execute, command);
+```
+
+Prefer a typed arrow function over `useCase.execute.bind(useCase)`: with `strictBindCallApply: false` (this repo) `bind` returns `any`, so the arguments are no longer type-checked.
 
 ### MiddlewareEntry
 
@@ -72,7 +122,7 @@ Middlewares can be either:
 - **Instances** (`new RetryMiddleware(3)`) — used directly, no DI needed
 
 ```typescript
-type MiddlewareEntry = Type<IMiddleware> | IMiddleware;
+type MiddlewareEntry<F extends Fn = Fn> = Type<IMiddleware<F>> | IMiddleware<F>;
 ```
 
 ## Scope Levels
@@ -159,10 +209,10 @@ export class CreateTodoUseCase {
 
 ```typescript
 @Injectable()
-export class TransactionMiddleware<TInput, TOutput> implements IMiddleware<TInput, TOutput> {
+export class TransactionMiddleware<F extends Fn = Fn> implements IMiddleware<F> {
   constructor(private readonly dataSource: DataSource) {}
 
-  async handle(input: TInput, next: NextFunction<TOutput>): Promise<TOutput> {
+  async handle(_ctx: Context<F>, next: NextFunction<F>): Promise<Result<F>> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.startTransaction();
     try {
@@ -179,6 +229,8 @@ export class TransactionMiddleware<TInput, TOutput> implements IMiddleware<TInpu
 }
 ```
 
+In a generic middleware class, declare the return type as `Promise<Result<F>>`: the type TypeScript infers for `async handle` does not match `IMiddleware<F>` (TS2416).
+
 Pass the **class type** — `PipelineResolver` resolves it from the DI container via `ModuleRef`:
 
 ```typescript
@@ -188,10 +240,10 @@ Pass the **class type** — `PipelineResolver` resolves it from the DI container
 ### Plain Middleware (no DI dependencies)
 
 ```typescript
-class RetryMiddleware<TInput, TOutput> implements IMiddleware<TInput, TOutput> {
+class RetryMiddleware<F extends Fn = Fn> implements IMiddleware<F> {
   constructor(private readonly maxRetries: number) {}
 
-  async handle(input: TInput, next: NextFunction<TOutput>): Promise<TOutput> {
+  async handle(_ctx: Context<F>, next: NextFunction<F>): Promise<Result<F>> {
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
         return await next();
@@ -203,6 +255,8 @@ class RetryMiddleware<TInput, TOutput> implements IMiddleware<TInput, TOutput> {
   }
 }
 ```
+
+Every attempt sees the same `ctx`, so argument changes made by middlewares inside the retry run again on the already changed arguments and must be idempotent (trimming is, appending is not).
 
 Pass an **instance** — used directly, no DI resolution:
 
@@ -226,16 +280,18 @@ export class CreateTodoUseCase implements UseCase<CreateTodoCommand, CreateTodoR
   constructor(private readonly pipelineResolver: PipelineResolver) {}
 
   async execute(command: CreateTodoCommand): Promise<CreateTodoResult> {
-    const pipeline = this.pipelineResolver.resolve<CreateTodoCommand, CreateTodoResult>(
-      TodoModule,           // module scope
-      CreateTodoUseCase,    // class scope
-      'execute',            // method scope
-    );
+    const pipeline = this.pipelineResolver
+      .resolve<CreateTodoUseCase['execute']>(
+        TodoModule,           // module scope
+        CreateTodoUseCase,    // class scope
+        'execute',            // method scope
+      )
+      .withTarget('CreateTodoUseCase.execute');
 
-    return pipeline.execute(command, async (cmd) => {
+    return pipeline.execute(async (cmd: CreateTodoCommand) => {
       // actual business logic here
       return result;
-    });
+    }, command);
   }
 }
 ```
@@ -245,77 +301,60 @@ export class CreateTodoUseCase implements UseCase<CreateTodoCommand, CreateTodoR
 Middlewares execute in onion/wrapper order. First-added is outermost:
 
 ```
-Global MW → Module MW → Class MW → Method MW → Handler
-                                                  ↓
+Global MW → Module MW → Class MW → Method MW → Target
+                                                 ↓
 Global MW ← Module MW ← Class MW ← Method MW ← result
 ```
 
 Each middleware can:
-- **Transform input** before calling `next()`
+- **Change the arguments** (`ctx.args`) before calling `next()`
 - **Transform output** after `next()` returns
 - **Short-circuit** by returning without calling `next()`
 - **Handle errors** by wrapping `next()` in try/catch
+- **Retry** by calling `next()` again
+- **Share data** with later middlewares through `ctx.metadata`
 
-## Pipeline Class (Standalone Usage)
+## Using the Core Without NestJS (Front-End)
 
-The `Pipeline` class can be used independently of NestJS for simple cases:
+`core/` imports nothing from NestJS or `reflect-metadata` and compiles without Node types, so front-end code (Next.js/React, an API client) can use it directly:
 
 ```typescript
-import { Pipeline, IMiddleware } from '@common/pipeline/index.js';
-
-interface OrderCommand {
-  orderId: string;
-  quantity: number;
-}
-
-interface OrderResult {
-  success: boolean;
-  orderId: string;
-}
-
-const logging: IMiddleware<OrderCommand, OrderResult> = {
-  handle: async (input, next) => {
-    console.log('Processing order', input.orderId);
-    const result = await next();
-    console.log('Order result', result.success);
-    return result;
-  },
-};
-
-const pipeline = new Pipeline<OrderCommand, OrderResult>();
-pipeline.use(logging);
-
-const result = await pipeline.execute(
-  { orderId: 'ORD-001', quantity: 5 },
-  async (input) => ({ success: true, orderId: input.orderId }),
-);
-// Logs: Processing order ORD-001
-// Logs: Order result true
-// result = { success: true, orderId: 'ORD-001' }
+import { IMiddleware, Pipeline } from '@common/pipeline/core';
 ```
+
+Do not import `@common/pipeline` in the browser: that barrel also exports the NestJS layer. `core/api-client.example.spec.ts` shows an API client chain: auth → correlation id → retry → error mapping → log. The isolation is enforced by `core/core-isolation.spec.ts` (imports) and `tsconfig.core.json` (browser-like compile in `npm run typecheck`).
 
 ## API Reference
 
-### `IMiddleware<TInput, TOutput>`
+### `Context<F>`
+
+| Property | Description |
+|----------|-------------|
+| `args` | The target's arguments; middlewares may change them or assign a new tuple |
+| `target` | Function name, `'anonymous'`, or the name given by `withTarget` |
+| `metadata` | `Map` shared by the middlewares of one execution |
+
+### `IMiddleware<F>`
 
 | Method | Description |
 |--------|-------------|
-| `handle(input, next)` | Process the input and optionally call `next()` to continue the chain |
+| `handle(ctx, next)` | Inspect or change `ctx`, optionally call `next()` (no arguments) to continue the chain |
 
-### `Pipeline<TInput, TOutput>`
+### `Pipeline<F>`
 
 | Method | Description |
 |--------|-------------|
 | `use(...middlewares)` | Add middleware instances. Returns `this` for chaining |
 | `useAll(pipeline)` | Merge all middlewares from another Pipeline |
 | `getMiddlewares()` | Returns a shallow copy of the middleware array |
-| `execute(input, handler)` | Build the chain and execute with the given handler |
+| `withTarget(name)` | Returns a new pipeline (copy of the middlewares) whose executions report `name` as `ctx.target` |
+| `execute(fn, ...args)` | Run `fn(...args)` through the middlewares; resolves to the awaited result of `fn` |
 
 ### `PipelineResolver`
 
 | Method | Description |
 |--------|-------------|
-| `resolve(moduleClass?, targetClass?, methodName?)` | Collect entries from all scopes, resolve DI, return Pipeline |
+| `resolve<F>(moduleClass?, targetClass?, methodName?)` | Collect entries from all scopes, resolve DI, return `Pipeline<F>` |
 
 ### `PipelineModule`
 
@@ -346,27 +385,35 @@ const result = await pipeline.execute(
 Run the pipeline library tests:
 
 ```bash
-npx jest --no-coverage common/pipeline
+npx jest --no-coverage src/common/pipeline
+npm run typecheck   # type-level tests (*.types.spec.ts) and the browser-like core compile
 ```
 
 ### Test Coverage
 
 | Test File | Tests | What's Covered |
 |-----------|-------|----------------|
-| `pipeline.spec.ts` | 12 | use, useAll, getMiddlewares, execute (ordering, short-circuit, errors, transform) |
-| `pipeline.decorator.spec.ts` | 11 | @UsePipeline class/method, @UseModulePipeline, @PipelineModuleDecorator |
-| `pipeline.resolver.spec.ts` | 10 | All 4 scopes, partial scopes, DI resolution, mixed entries |
-| `pipeline.module.spec.ts` | 11 | register() with class types/instances/mixed, DI integration |
-| **Total** | **44** | |
+| `core/pipeline.spec.ts` | 24 | use, useAll, getMiddlewares, execute (ordering, short-circuit, errors, transform), plain multi-argument functions, shared context, readonly commands, target and `withTarget`, retry |
+| `core/pipeline.types.spec.ts` | 4 | Compile-time checks, enforced by `npm run typecheck`: arguments, result, `ctx.args`, `next()`, typed pipelines, readonly fields |
+| `core/core-isolation.spec.ts` | 4 | `core/` imports nothing outside `core/` and does not use reflect-metadata |
+| `core/api-client.example.spec.ts` | 2 | Front-end API client chain (auth, correlation id, retry, error mapping, log) |
+| `pipeline.decorator.spec.ts` | 12 | @UsePipeline class/method, @UseModulePipeline, @PipelineModuleDecorator |
+| `pipeline.resolver.spec.ts` | 9 | All 4 scopes, partial scopes, DI resolution, mixed entries |
+| `pipeline.module.spec.ts` | 8 | register() with class types/instances/mixed, DI integration |
+| **Total** | **63** | |
 
 ## Design Decisions
 
 1. **Generic, not domain-specific**: Lives in `src/common/`, has no knowledge of domain entities or use cases. Can be extracted to a standalone npm package.
 
-2. **DI-aware but not DI-dependent**: The `Pipeline` class is pure TypeScript — no NestJS imports. Only `PipelineResolver` and `PipelineModule` depend on NestJS for DI integration.
+2. **Framework-free core**: `core/` (`Pipeline`, `Context`, `IMiddleware`) is pure TypeScript — no NestJS, no reflect-metadata, no Node types — so it also runs in the browser. Only the decorators, `PipelineResolver` and `PipelineModule` depend on NestJS for DI integration.
 
 3. **Class types vs instances**: Supporting both allows `@Injectable()` middlewares with full DI (database connections, loggers, config) alongside simple parameterized middlewares (`new RetryMiddleware(3)`) that don't need DI.
 
 4. **Scope merging, not override**: All scopes accumulate. A method-level pipeline doesn't replace the class-level one — it extends it. This follows the principle of least surprise.
 
 5. **`reduceRight` composition**: First-added middleware is outermost, matching the natural reading order of decorator stacking and `use()` calls.
+
+6. **The target is not wrapped**: `execute(fn, ...args)` runs any function as is — a plain `sayHello(firstName, lastName)` needs no adapter, decorator or single-input object.
+
+7. **One shared context, argumentless `next()`**: Middlewares pass changes to the next middleware and the target through `ctx`, so writing a middleware never means forwarding arguments.

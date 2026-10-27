@@ -1,8 +1,8 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 
-import { IMiddleware, MiddlewareEntry, isMiddlewareClass } from './middleware.interface';
-import { Pipeline } from './pipeline';
+import { Fn, IMiddleware, Pipeline } from './core';
+import { MiddlewareEntry, isMiddlewareClass } from './middleware.interface';
 import {
   CLASS_PIPELINE_METADATA,
   GLOBAL_PIPELINE,
@@ -19,13 +19,13 @@ export class PipelineResolver {
     private readonly globalEntries?: MiddlewareEntry[],
   ) {}
 
-  resolve<TInput, TOutput>(
+  resolve<F extends Fn = Fn>(
     // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
     moduleClass?: Function | null,
     // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
     targetClass?: Function | null,
     methodName?: string | null,
-  ): Pipeline<TInput, TOutput> {
+  ): Pipeline<F> {
     const entries: MiddlewareEntry[] = [];
 
     if (this.globalEntries) {
@@ -61,13 +61,13 @@ export class PipelineResolver {
       }
     }
 
-    const middlewares: IMiddleware<TInput, TOutput>[] = entries.map(entry =>
+    const middlewares: IMiddleware<F>[] = entries.map(entry =>
       isMiddlewareClass(entry)
         ? this.moduleRef.get(entry, { strict: false })
-        : (entry as IMiddleware<TInput, TOutput>),
+        : (entry as IMiddleware<F>),
     );
 
-    const pipeline = new Pipeline<TInput, TOutput>();
+    const pipeline = new Pipeline<F>();
     pipeline.use(...middlewares);
     return pipeline;
   }
